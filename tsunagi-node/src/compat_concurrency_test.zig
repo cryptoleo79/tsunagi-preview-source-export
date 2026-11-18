@@ -56,7 +56,7 @@ fn run(ctx: *Ctx) !void {
         g_mutex.unlock();
 
         // ── filesystem: each thread writes+reads its OWN file ──
-        var name_buf: [128]u8 = undefined;
+        var name_buf: [std.fs.max_path_bytes]u8 = undefined;
         const path = try std.fmt.bufPrint(&name_buf, "{s}/t{d}_{d}.bin", .{ ctx.dir, ctx.id, i % 4 });
 
         var payload: [256]u8 = undefined;

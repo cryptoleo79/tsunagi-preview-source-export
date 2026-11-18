@@ -11,7 +11,7 @@ Maintained by A$Y (Tsunagi Project). Independent conformance review is welcome.
 | Commit | Content |
 |---|---|
 | `8b80c3b7f35dd16afca611cbef1c38ed19869999` (tag `october-2026-follower-source`) | The source of original commit `4cdcde42d5cd5f097e50bf5212db671b25ee6947`, from which the October 2026 follower binary was built, with the differences listed below. |
-| Later commits on `main` | Publication material added on top: build guide, review guide, source/release map, security policy, third-party notices and license texts, the CI workflow, and the corrected `tsunagi-node/zig.version`. The website page `tsunagi-node/web/index.html` and its copy under `web/site/` show the project name as a text heading in place of one omitted image. No file under `tsunagi-node/src`, `tsunagi-node/tools` or `tsunagi-node/build.zig` is changed. |
+| Later commits on `main` | Publication material added on top: build guide, review guide, source/release map, security policy, third-party notices and license texts, the CI workflow, and the corrected `tsunagi-node/zig.version`. The website page `tsunagi-node/web/index.html` and its copy under `web/site/` show the project name as a text heading in place of one omitted image. One test file, `tsunagi-node/src/compat_concurrency_test.zig`, has a larger path buffer so that the test also passes when the checkout path is long. No other file under `tsunagi-node/src`, and no file under `tsunagi-node/tools` or `tsunagi-node/build.zig`, is changed. |
 
 ## Differences from the original commit
 
@@ -47,7 +47,7 @@ Git object ids of the parts the build reads:
 
 | Path | Original commit | Export commit and tip of `main` |
 |---|---|---|
-| `tsunagi-node/src` | `9f395575f385cd5a225f5e7b1d7029884f255133` | `8acf4d75ebbd5691556642ca27170af9a2bb75c8` (two comment lines differ) |
+| `tsunagi-node/src` | `9f395575f385cd5a225f5e7b1d7029884f255133` | export commit: `8acf4d75ebbd5691556642ca27170af9a2bb75c8` (two comment lines differ); tip of `main`: `e1b15c54e868c1ce16010ee2de935cc0ad174f04` (one test file also differs) |
 | `tsunagi-node/tools` | `209e6d3b80cb6cba5cbddf1f110adbcd4af60f2a` | same |
 | `tsunagi-node/build.zig` | `8c28479ae199d113bd3403057c37010ee7b07fc4` | same |
 | `tsunagi-node/scripts` | `c1e37f58f7c9335514ccdd5096e4ca0f5196b55c` | same |

@@ -11,7 +11,7 @@ Maintained by A$Y (Tsunagi Project). Independent conformance review is welcome.
 | Commit | Content |
 |---|---|
 | `8b80c3b7f35dd16afca611cbef1c38ed19869999` (tag `october-2026-follower-source`) | The source of original commit `4cdcde42d5cd5f097e50bf5212db671b25ee6947`, from which the October 2026 follower binary was built, with the differences listed below. |
-| Later commits on `main` | Publication material added on top: build guide, review guide, source/release map, security policy, third-party notices and license texts, the CI workflow, and the corrected `tsunagi-node/zig.version`. No file under `tsunagi-node/src`, `tsunagi-node/tools` or `tsunagi-node/build.zig` is changed. |
+| Later commits on `main` | Publication material added on top: build guide, review guide, source/release map, security policy, third-party notices and license texts, the CI workflow, and the corrected `tsunagi-node/zig.version`. The website page `tsunagi-node/web/index.html` and its copy under `web/site/` show the project name as a text heading in place of one omitted image. No file under `tsunagi-node/src`, `tsunagi-node/tools` or `tsunagi-node/build.zig` is changed. |
 
 ## Differences from the original commit
 
@@ -20,9 +20,9 @@ The export commit is **not byte-identical** to the original commit. It differs a
 - **Omitted:** 27 submodule entries that held no files.
 - **Omitted files (18):** 13 files under `tsunagi-node/rehearsal-archive/` (six compiled
   executables from May 2026 rehearsals, with their notes and fingerprint lists), two
-  internal process documents, and two image files (one of them stored at two paths). The
-  website page `tsunagi-node/web/index.html` and its copy under `web/site/` still refer to
-  one omitted image.
+  internal process documents, and two image files (one of them stored at two paths). At
+  the tagged commit the website page `tsunagi-node/web/index.html` and its copy under
+  `web/site/` still refer to one omitted image; at the tip of `main` they do not.
 - **Edited source comments (2 lines):** the text of one comment line in
   `tsunagi-node/src/producer/keys.zig` and one in `tsunagi-node/src/producer/producer.zig`.
   No code, identifier or string literal is changed, and the line count of both files is

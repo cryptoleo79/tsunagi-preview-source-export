@@ -1,0 +1,28 @@
+# Runtime telemetry
+status.json
+
+# Logs
+*.log
+
+# Local backups
+backups/
+*.tar.gz
+
+# Zig build artifacts
+zig-cache/
+.zig-cache-015/
+zig-out/
+
+# Temporary files
+tmp/
+*.tmp
+
+# Operator-specific data (never commit)
+operator.json
+*.ndjson
+*.key
+*.pem
+*.p12
+safe_mode.json
+loop_stats.json
+health.json

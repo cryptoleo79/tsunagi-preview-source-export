@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Tsunagi TSF Artifact Export nightly at 03:00
+
+[Timer]
+OnCalendar=*-*-* 03:00:00
+Persistent=true
+Unit=tsf-artifact.service
+
+[Install]
+WantedBy=timers.target

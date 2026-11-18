@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TSUNAGI Guardian — Operator Experience Layer</title>
+<meta name="description" content="TSUNAGI Guardian: safe, bilingual operator interaction for a deterministic Cardano node.">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #05080e;
+  --bg-surface: #0a0f1a;
+  --bg-card: rgba(12,18,30,0.65);
+  --bg-card-hover: rgba(16,24,40,0.8);
+  --border: rgba(80,120,180,0.10);
+  --border-hover: rgba(80,120,180,0.28);
+  --border-accent: rgba(80,140,220,0.35);
+  --text: #d0d6e2;
+  --text-m: #7a8598;
+  --text-d: #4c5668;
+  --accent: #3d6fa8;
+  --accent-l: #5a8ec8;
+  --white: #eceef3;
+  --green: #3da86f;
+  --green-bg: rgba(61,168,111,0.08);
+  --green-border: rgba(61,168,111,0.25);
+  --mono: 'SF Mono','Cascadia Code','Fira Code','Consolas',monospace;
+  --sans: -apple-system,BlinkMacSystemFont,'Segoe UI','Inter',Helvetica,Arial,sans-serif;
+}
+html { scroll-behavior: smooth; }
+body { font-family: var(--sans); background: var(--bg); color: var(--text); line-height: 1.6; }
+
+/* ── Utility Bar ── */
+.ub { position:fixed; top:0; left:0; right:0; z-index:100; height:48px; display:flex; align-items:center; justify-content:space-between; padding:0 28px; background:rgba(5,8,14,0.92); backdrop-filter:blur(14px); border-bottom:1px solid var(--border); }
+.ub-l { display:flex; align-items:center; gap:20px; }
+.ub-brand { font-size:0.82rem; font-weight:700; letter-spacing:0.14em; color:var(--white); text-decoration:none; }
+.ub-nav { display:flex; gap:6px; flex-wrap:wrap; }
+.ub-nav a { font-size:0.75rem; font-weight:500; letter-spacing:0.03em; color:var(--text-m); text-decoration:none; padding:5px 12px; border-radius:4px; border:1px solid transparent; transition:all 0.2s; }
+.ub-nav a:hover { color:var(--white); border-color:var(--border-accent); background:rgba(60,112,180,0.08); }
+.lang-switch { display:flex; align-items:center; gap:6px; margin-left:12px; font-size:0.75rem; white-space:nowrap; }
+.lang-switch a { text-decoration:none; color:var(--text-m); transition:color 0.2s ease; }
+.lang-switch a:hover { color:var(--text); }
+.lang-cur { color:var(--accent-l) !important; font-weight:600; }
+.lang-div { opacity:0.4; }
+
+/* ── Layout ── */
+.pg { max-width:960px; margin:0 auto; padding:80px 28px 60px; }
+.section { margin-bottom:48px; }
+.section-label { font-family:var(--mono); font-size:0.56rem; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent-l); margin-bottom:8px; }
+
+/* ── Hero ── */
+.hero { text-align:center; padding:48px 0 40px; }
+.hero h1 { font-size:2rem; font-weight:700; color:var(--white); letter-spacing:0.04em; margin-bottom:8px; }
+.hero-sub { font-size:1rem; color:var(--text-m); margin-bottom:20px; }
+.hero-text { font-size:0.92rem; color:var(--text); max-width:640px; margin:0 auto 28px; line-height:1.7; }
+.hero-actions { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+.btn { display:inline-block; font-size:0.82rem; font-weight:600; letter-spacing:0.04em; padding:10px 24px; border-radius:6px; text-decoration:none; transition:all 0.2s; }
+.btn-primary { background:var(--accent); color:var(--white); border:1px solid var(--accent); }
+.btn-primary:hover { background:var(--accent-l); }
+.btn-outline { color:var(--accent-l); border:1px solid var(--border-accent); background:transparent; }
+.btn-outline:hover { background:rgba(60,112,180,0.08); color:var(--white); }
+
+/* ── Cards ── */
+.card-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:16px; margin-top:16px; }
+.card { background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:20px 22px; transition:border-color 0.25s; }
+.card:hover { border-color:var(--border-hover); }
+.card-title { font-family:var(--mono); font-size:0.62rem; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--accent-l); margin-bottom:8px; }
+.card-text { font-size:0.84rem; color:var(--text-m); line-height:1.6; }
+
+/* ── Command Examples ── */
+.cmd-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; margin-top:16px; }
+.cmd-block { background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:20px 22px; border-left:3px solid var(--accent); }
+.cmd-jp { font-size:1.05rem; color:var(--white); margin-bottom:8px; font-weight:500; }
+.cmd-arrow { font-family:var(--mono); font-size:0.72rem; color:var(--accent-l); margin-bottom:4px; }
+.cmd-en { font-size:0.84rem; color:var(--text-m); line-height:1.5; }
+
+/* ── Planned Badge ── */
+.planned-badge { display:inline-block; font-family:var(--mono); font-size:0.56rem; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--accent-l); background:rgba(60,112,180,0.08); border:1px solid var(--border-accent); border-radius:4px; padding:3px 10px; margin-bottom:16px; }
+
+/* ── Screenshot Placeholders ── */
+.screenshot-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:16px; margin-top:16px; }
+.screenshot { background:rgba(10,15,26,0.5); border:1px solid var(--border); border-radius:8px; height:120px; display:flex; align-items:center; justify-content:center; }
+.screenshot-label { font-family:var(--mono); font-size:0.6rem; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-d); }
+
+/* ── Safety ── */
+.safety-list { list-style:none; padding:0; }
+.safety-list li { font-size:0.88rem; color:var(--text); padding:8px 0; border-bottom:1px solid rgba(80,120,180,0.06); display:flex; align-items:flex-start; gap:10px; }
+.safety-dot { width:6px; height:6px; border-radius:50%; background:var(--green); margin-top:8px; flex-shrink:0; }
+
+/* ── Footer ── */
+.ft { text-align:center; padding:40px 0 32px; border-top:1px solid var(--border); margin-top:48px; }
+.ft p { font-size:0.78rem; color:var(--text-d); letter-spacing:0.03em; }
+.ft .fm { font-size:0.88rem; color:var(--text-m); font-weight:600; margin-bottom:8px; }
+
+/* ── Responsive ── */
+@media(max-width:768px){
+  .pg { padding:70px 18px 40px; }
+  .hero h1 { font-size:1.5rem; }
+  .card-grid { grid-template-columns:1fr; }
+  .cmd-grid { grid-template-columns:1fr; }
+  .screenshot-grid { grid-template-columns:1fr 1fr; }
+  .ub { padding:0 16px; }
+  .ub-nav { gap:2px; }
+  .ub-nav a { padding:5px 8px; font-size:0.7rem; }
+}
+@media(max-width:480px){
+  .screenshot-grid { grid-template-columns:1fr; }
+}
+
+/* ── Guardian v0 ── */
+.g-panel { background:var(--bg-card); border:1px solid var(--border-accent); border-radius:8px; padding:24px; margin-bottom:32px; }
+.g-mode-label { font-family:var(--mono); font-size:0.52rem; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--green); background:var(--green-bg); border:1px solid var(--green-border); border-radius:4px; padding:2px 8px; display:inline-block; margin-bottom:14px; }
+.g-input-row { display:flex; gap:10px; margin-bottom:12px; }
+.g-input { flex:1; font-family:var(--mono); font-size:0.88rem; padding:10px 14px; border-radius:6px; border:1px solid var(--border-accent); background:rgba(10,15,26,0.8); color:var(--white); outline:none; }
+.g-input:focus { border-color:var(--accent-l); }
+.g-btn { font-family:var(--mono); font-size:0.78rem; font-weight:600; padding:10px 20px; border-radius:6px; border:1px solid var(--accent); background:var(--accent); color:var(--white); cursor:pointer; transition:background 0.2s; }
+.g-btn:hover { background:var(--accent-l); }
+.g-examples { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:6px; }
+.g-ex { font-family:var(--mono); font-size:0.68rem; padding:4px 10px; border-radius:4px; border:1px solid var(--border); background:transparent; color:var(--text-m); cursor:pointer; transition:all 0.15s; }
+.g-ex:hover { color:var(--white); border-color:var(--border-accent); }
+.g-output { background:rgba(5,8,14,0.6); border:1px solid var(--border); border-radius:6px; padding:18px 20px; margin-top:16px; min-height:60px; display:none; }
+.g-output.visible { display:block; }
+
+.g-explain {
+  max-width: 900px;
+  margin: 20px auto 28px;
+  padding: 16px 18px;
+  background: rgba(12,18,30,0.55);
+  border: 1px solid rgba(80,120,180,0.16);
+  border-radius: 10px;
+  color: #d0d6e2;
+  line-height: 1.7;
+}
+.g-explain p + p {
+  margin-top: 10px;
+}
+
+.g-out-section { margin-bottom:14px; }
+.g-out-section:last-child { margin-bottom:0; }
+.g-out-title { font-family:var(--mono); font-size:0.56rem; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--accent-l); margin-bottom:6px; }
+.g-out-row { font-family:var(--mono); font-size:0.82rem; color:var(--text); padding:2px 0; }
+.g-out-row span { color:var(--text-d); }
+.g-out-val { color:var(--white); }
+.g-out-unsupported { font-size:0.86rem; color:var(--text-m); line-height:1.6; }
+</style>
+</head>
+<body>
+
+<!-- Utility Bar (shared) -->
+<div id="nav-container"></div>
+<script src="/assets/nav.js"></script>
+
+<div class="pg">
+
+  <!-- Hero -->
+  <section class="hero">
+    <span class="planned-badge" style="margin-bottom:12px;">Preview &middot; Planned Operator Experience</span>
+    <h1>TSUNAGI Guardian</h1>
+    <p class="hero-sub">Safe operator interaction for a deterministic Cardano node</p>
+    <p class="hero-text">
+      Guardian is the operator-facing experience layer for TSUNAGI.
+      It is designed to make node interaction safer, clearer, and more human
+      &mdash; without compromising deterministic core behavior.
+    </p>
+    <div class="hero-actions">
+      <a href="/operator/" class="btn btn-primary">Operator UI</a>
+      <a href="/project/" class="btn btn-outline">Project</a>
+      <a href="/status/" class="btn btn-outline">Live Status</a>
+    </div>
+  </section>
+<div class="g-explain">
+  <p>
+    Guardian is a deterministic operator interface for TSUNAGI.
+    It reads real node state and responds using rule-based logic.
+  </p>
+  <p>
+    You can ask questions in English or Japanese and get consistent,
+    explainable answers based on live data.
+  </p>
+</div>
+
+  <!-- Guardian v0 Console -->
+  <div class="section">
+    <div class="section-label">Guardian Console</div>
+    <div class="g-panel">
+      <div class="g-mode-label">Read-Only Mode &mdash; No execution. Deterministic queries only.</div>
+      <div class="g-input-row">
+        <input class="g-input" id="g-input" type="text" placeholder="Enter command (EN or JP)..." autocomplete="off">
+        <button class="g-btn" onclick="runGuardian()">Run</button>
+      </div>
+      <div class="g-examples">
+        <button class="g-ex" onclick="gFill('Check node status')">Check node status</button>
+        <button class="g-ex" onclick="gFill('Show operator state')">Show operator state</button>
+        <button class="g-ex" onclick="gFill('Show sync state')">Show sync state</button>
+        <button class="g-ex" onclick="gFill('Show latest block')">Show latest block</button>
+        <button class="g-ex" onclick="gFill('ノードの状態を確認')">ノードの状態を確認</button>
+        <button class="g-ex" onclick="gFill('オペレーター状態を表示')">オペレーター状態を表示</button>
+        <button class="g-ex" onclick="gFill('同期状態を確認')">同期状態を確認</button>
+        <button class="g-ex" onclick="gFill('最新ブロックを見せて')">最新ブロックを見せて</button>
+        <button class="g-ex" onclick="gFill('Why is my node slow?')">Why slow?</button>
+        <button class="g-ex" onclick="gFill('Why are rollbacks happening?')">Why rollbacks?</button>
+        <button class="g-ex" onclick="gFill('What should I check next?')">What next?</button>
+        <button class="g-ex" onclick="gFill('Show recent blocks')">Recent blocks</button>
+        <button class="g-ex" onclick="gFill('最近のブロック')">最近のブロック</button>
+        <button class="g-ex" onclick="gExplainTip()">Explain latest block</button>
+        <button class="g-ex" onclick="gExplainTip()">最新ブロックを説明</button>
+      </div>
+      <div class="g-output" id="g-output"></div>
+    </div>
+  </div>
+
+  <!-- What TSUNAGI Already Does -->
+  <div class="section">
+    <div class="section-label">What TSUNAGI Already Does</div>
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-title">Live Node State</div>
+        <div class="card-text">Real-time sync status, tip tracking, and slot-level chain position from a live preview node.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Chain Progress</div>
+        <div class="card-text">Block-by-block processing with deterministic decode, rollback handling, and continuity verification.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">UTxO / Ledger</div>
+        <div class="card-text">Apply/rollback-symmetric UTxO engine with bounded undo history, snapshot persistence, and delta tracking.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Health + Observability</div>
+        <div class="card-text">Composite health scoring, slot rhythm analysis, peer monitoring, mempool tracking, and confirmation correlation.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- What Guardian Adds -->
+  <div class="section">
+    <div class="section-label">What Guardian Adds</div>
+    <span class="planned-badge">Planned Operator Experience</span>
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-title">Guided Operations</div>
+        <div class="card-text">Step-by-step workflows for common tasks: restart, key rotation, stake verification, health diagnosis.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Safer Execution</div>
+        <div class="card-text">Every operator action passes through validation before execution. No blind commands. No hidden side effects.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Human-Readable</div>
+        <div class="card-text">Clear explanations of node state, errors, and decisions. Operators understand what the node is doing and why.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Bilingual (JP/EN)</div>
+        <div class="card-text">Native Japanese command interaction alongside English. Operators work in the language they think in.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Japanese Command Vision -->
+  <div class="section">
+    <div class="section-label">Japanese Command Interaction</div>
+    <span class="planned-badge">Planned Operator Experience</span>
+    <div class="cmd-grid">
+      <div class="cmd-block">
+        <div class="cmd-jp">「ノードの状態を確認」</div>
+        <div class="cmd-arrow">&rarr;</div>
+        <div class="cmd-en">Check node health and sync state. Returns tip age, chain position, health score, and active warnings.</div>
+      </div>
+      <div class="cmd-block">
+        <div class="cmd-jp">「安全に再起動したい」</div>
+        <div class="cmd-arrow">&rarr;</div>
+        <div class="cmd-en">Guided safe restart workflow. Verifies chain state, saves snapshot, confirms readiness before stopping the node.</div>
+      </div>
+      <div class="cmd-block">
+        <div class="cmd-jp">「UTxOの状態を見せて」</div>
+        <div class="cmd-arrow">&rarr;</div>
+        <div class="cmd-en">Show current ledger state. UTxO count, recent deltas, chain depth, and snapshot consistency.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screenshot Placeholders -->
+  <div class="section">
+    <div class="section-label">Operator Surfaces</div>
+    <div class="screenshot-grid">
+      <div class="screenshot"><span class="screenshot-label">Node Status</span></div>
+      <div class="screenshot"><span class="screenshot-label">Operator Dashboard</span></div>
+      <div class="screenshot"><span class="screenshot-label">Health / Sync</span></div>
+      <div class="screenshot"><span class="screenshot-label">Future Guardian Console</span></div>
+    </div>
+  </div>
+
+  <!-- Safety Model -->
+  <div class="section">
+    <div class="section-label">Safety Model</div>
+    <ul class="safety-list">
+      <li><span class="safety-dot"></span>TSUNAGI core stays deterministic. Guardian is an interaction layer, not a runtime modification.</li>
+      <li><span class="safety-dot"></span>Guardian never bypasses validation. Every action is checked before execution.</li>
+      <li><span class="safety-dot"></span>Operator intent is translated into safe, bounded workflows. No unrestricted command execution.</li>
+      <li><span class="safety-dot"></span>All state queries are read-only. Mutations require explicit operator confirmation.</li>
+      <li><span class="safety-dot"></span>Bilingual support is a translation layer, not a separate execution path. Same safety guarantees in both languages.</li>
+    </ul>
+  </div>
+
+  <!-- Engineering Integrity -->
+  <div class="section">
+    <div class="section-label">Engineering Integrity</div>
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:22px 24px;">
+      <p style="font-size:0.88rem;color:var(--text);line-height:1.7;margin-bottom:12px;">
+        Guardian is not unrestricted natural language execution. It is a bounded interaction layer
+        built on top of a deterministic runtime.
+      </p>
+      <ul class="safety-list" style="border:none;">
+        <li><span class="safety-dot"></span>The deterministic core remains the sole authority on chain state and node behavior.</li>
+        <li><span class="safety-dot"></span>Guardian translates operator intent into validated, bounded workflows &mdash; never bypasses checks.</li>
+        <li><span class="safety-dot"></span>Japanese and English commands follow the same execution path. Language is a surface, not a shortcut.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Closing -->
+  <div class="section" style="text-align:center;padding-top:16px;">
+    <p style="font-size:0.95rem;color:var(--text-m);font-weight:500;">
+      Built for operators who value clarity, control, and correctness.
+    </p>
+  </div>
+
+  <!-- Footer -->
+  <div class="ft">
+    <p class="fm">Let It Run. Let It Resolve.</p>
+    <p>tsunagi.tech &middot; Independent Cardano infrastructure research</p>
+  </div>
+
+</div>
+
+
+<script>
+var DASH = '\u2014';
+function gFill(t) { document.getElementById('g-input').value = t; }
+function gExplainTip() {
+  fetch('/chain/tip').then(function(r){return r.json();}).then(function(d){
+    if(d.hash){document.getElementById('g-input').value='explain block '+d.hash;runGuardian();}
+  }).catch(function(){gFill('explain block <paste hash here>');});
+}
+function fmt(v) { return v != null ? v.toLocaleString() : DASH; }
+function age(s) {
+  if (s == null) return DASH;
+  s = Math.floor(s); if (s < 0) s = 0;
+  if (s < 60) return s + 's';
+  if (s < 3600) return Math.floor(s/60) + 'm ' + (s%60) + 's';
+  return Math.floor(s/3600) + 'h ' + Math.floor((s%3600)/60) + 'm';
+}
+function row(label, val) {
+  return '<div class="g-out-row"><span>' + label + ':</span> <span class="g-out-val">' + (val != null ? val : DASH) + '</span></div>';
+}
+function sec(title, rows) {
+  return '<div class="g-out-section"><div class="g-out-title">' + title + '</div>' + rows + '</div>';
+}
+function show(html) {
+  var el = document.getElementById('g-output');
+  el.innerHTML = html;
+  el.className = 'g-output visible';
+}
+
+function classify(q) {
+  q = q.toLowerCase();
+  if (/recent.*block|最近.*ブロック|latest.*block|直近/.test(q)) return 'recent';
+  if (/why.*(slow|遅い|warn|critical|degraded)|なぜ.*(遅|警告)/.test(q)) return 'why_slow';
+  if (/why.*(rollback|ロールバック)|なぜ.*(ロールバック|巻き戻)/.test(q)) return 'why_rollback';
+  if (/what.*(check|next|すべき)|何.*(確認|チェック)|次に/.test(q)) return 'what_next';
+  if (/status|状態|確認|health|ヘルス/.test(q)) return 'status';
+  if (/operator|オペレーター|運用/.test(q)) return 'operator';
+  if (/sync|同期|tip/.test(q)) return 'sync';
+  if (/utxo|ledger|レジャー/.test(q)) return 'utxo';
+  if (/block|ブロック|最新/.test(q)) return 'block';
+  if (/why.*(fallback|フォールバック)|なぜ.*(fallback|フォールバック)/.test(q)) return 'why_fallback';
+  if (/truth|lmdb|coverage|カバレッジ|真実/.test(q)) return 'truth';
+  return null;
+}
+
+function runGuardian() {
+  var input = document.getElementById('g-input').value.trim();
+  if (!input) return;
+
+  // Detect 64-hex hash in input for block explain
+  var hashMatch = input.match(/[0-9a-fA-F]{64}/);
+  if (hashMatch) {
+    var bh = hashMatch[0].toLowerCase();
+    show('<div class="g-out-row" style="color:var(--text-d);">Looking up block...</div>');
+    fetch('/chain/header/' + bh).then(function(r) { return r.json(); }).then(function(d) {
+      if (d.found) {
+        var ph = d.prev_hash || DASH;
+        show(sec('Block Analysis', row('Hash', d.hash) + row('Slot', fmt(d.slot)) + row('Block No', fmt(d.block_no)) + row('Height', fmt(d.height)) + row('Prev Hash', ph) + row('Header CBOR', fmt(d.header_cbor_bytes) + ' bytes')) +
+          sec('Status', '<div class="g-out-row" style="color:var(--green);">Known to node. Present in local header store.</div>'));
+      } else {
+        show(sec('Block Lookup', row('Hash', bh)) +
+          sec('Result', '<div class="g-out-row">Block not found in local header store.</div>'));
+      }
+    }).catch(function() {
+      show(sec('Block Lookup', '<div class="g-out-row">Header store unavailable or request failed.</div>'));
+    });
+    return;
+  }
+
+  var intent = classify(input);
+  if (!intent) {
+    show('<div class="g-out-unsupported"><p>Guardian supports a limited set of read-only commands.</p>' +
+      '<p style="margin-top:8px;color:var(--text-d);">Data queries: <em>Check node status</em>, <em>Show operator state</em>, <em>Show sync state</em>, <em>Show latest block</em></p>' +
+      '<p style="margin-top:4px;color:var(--text-d);">Reasoning: <em>Why is my node slow?</em>, <em>Why are rollbacks happening?</em>, <em>What should I check next?</em></p>' +
+      '<p style="margin-top:4px;color:var(--text-d);">Chain: <em>Show recent blocks</em>, <em>Explain block &lt;hash&gt;</em>, <em>最近のブロック</em></p>' +
+      '<p style="margin-top:4px;color:var(--text-d);">日本語: <em>ノードの状態を確認</em>, <em>オペレーター状態を表示</em>, <em>同期状態を確認</em></p></div>');
+    return;
+  }
+  show('<div class="g-out-row" style="color:var(--text-d);">Fetching...</div>');
+  Promise.all([
+    fetch('/data/status.json?t=' + Date.now()).then(function(r) { return r.ok ? r.json() : {}; }).catch(function() { return {}; }),
+    fetch('/data/operator.json?t=' + Date.now()).then(function(r) { return r.ok ? r.json() : {}; }).catch(function() { return {}; }),
+    fetch('/data/recent-blocks.json?t=' + Date.now()).then(function(r) { return r.ok ? r.json() : {}; }).catch(function() { return {}; })
+  ]).then(function(res) {
+    var s = res[0]; var o = res[1]; var rb = res[2];
+    var recentBlocks = (rb && rb.recent) ? rb.recent : [];
+    // status.json: flat top-level (s.block, s.slot, s.status, s.tip_age_seconds, s.tip_hash)
+    // operator.json: nested (o.sync, o.pipeline, o.ledger, o.runtime)
+    var opipe = (o.pipeline || {}); var oledger = (o.ledger || {}); var ort = (o.runtime || {});
+    var h = s.tip_hash; if (h && h.length > 16) h = h.slice(0,8) + '\u2026' + h.slice(-8);
+    var html = '';
+    if (intent === 'status') {
+      html = sec('Node Status', row('Network', s.network) + row('Status', s.status) + row('Tip Age', age(s.tip_age_seconds)) + row('Slot', fmt(s.slot)) + row('Block', fmt(s.block)) + row('Generated', ort.generated_at || DASH));
+    } else if (intent === 'operator') {
+      html = sec('Operator State', row('Network', s.network) + row('Mode', oledger.primary_mode || s.primary_mode) + row('Shadow', (oledger.shadow_enabled != null ? (oledger.shadow_enabled ? 'Yes' : 'No') : (s.shadow_enabled != null ? (s.shadow_enabled ? 'Yes' : 'No') : DASH))) + row('UTxO Estimate', fmt(oledger.utxo_estimate != null ? oledger.utxo_estimate : s.utxo)) + row('Blocks Processed', fmt(opipe.blocks_processed)) + row('Rollbacks', fmt(opipe.rollbacks)) + row('Tx Last Block', fmt(opipe.tx_last_block != null ? opipe.tx_last_block : s.tx_count)));
+    } else if (intent === 'sync') {
+      html = sec('Sync State', row('Status', s.status) + row('Tip Age', age(s.tip_age_seconds)) + row('Slot', fmt(s.slot)) + row('Block', fmt(s.block)) + row('Tip Hash', h || DASH));
+    } else if (intent === 'utxo') {
+      var ud = s.utxo_delta; var uds = ud != null ? (ud > 0 ? '+' + ud : String(ud)) : DASH;
+      html = sec('UTxO / Ledger', row('UTxO Estimate', fmt(oledger.utxo_estimate != null ? oledger.utxo_estimate : s.utxo)) + row('Consumed', fmt(s.utxo_consumed)) + row('Produced', fmt(s.utxo_produced)) + row('Delta', uds) + row('Mode', oledger.primary_mode || s.primary_mode));
+    } else if (intent === 'block') {
+      html = sec('Latest Block', row('Block', fmt(s.block)) + row('Slot', fmt(s.slot)) + row('Tx Count', fmt(opipe.tx_last_block != null ? opipe.tx_last_block : s.tx_count)) + row('Tip Hash', h || DASH) + row('Tip Age', age(s.tip_age_seconds)));
+    } else if (intent === 'why_slow') {
+      var ta = s.tip_age_seconds;
+      var reasons = [];
+      if (ta != null && ta > 600) reasons.push('Tip age is ' + age(ta) + ' — node is significantly behind chain tip.');
+      else if (ta != null && ta > 120) reasons.push('Tip age is ' + age(ta) + ' — node is syncing but not yet at tip.');
+      else if (ta != null) reasons.push('Tip age is ' + age(ta) + ' — node appears to be following normally.');
+      if (opipe.rollbacks > 10) reasons.push('Rollback count is ' + opipe.rollbacks + ' — frequent rollbacks may indicate unstable peer connections.');
+      if (recentBlocks.length >= 2) {
+        var gaps = []; for (var gi = 0; gi < recentBlocks.length - 1; gi++) gaps.push(recentBlocks[gi].slot - recentBlocks[gi+1].slot);
+        var avgGap = gaps.reduce(function(a,b){return a+b;},0) / gaps.length;
+        if (avgGap > 60) reasons.push('Average slot gap between recent blocks is ' + Math.round(avgGap) + ' slots. Network may be sparse.');
+      } else if (recentBlocks.length === 0) {
+        reasons.push('No recent blocks available. Node may be starting up or disconnected.');
+      }
+      if (reasons.length === 0) reasons.push('No obvious issues detected from available metrics.');
+      html = sec('Diagnosis: Why Slow?', row('Status', s.status) + row('Tip Age', age(ta)) + row('Rollbacks', fmt(opipe.rollbacks))) +
+        sec('Analysis', '<div class="g-out-row" style="line-height:1.6;">' + reasons.join('<br>') + '</div>');
+    } else if (intent === 'why_rollback') {
+      var rb = opipe.rollbacks || 0;
+      var bp = opipe.blocks_processed || 0;
+      var analysis = '';
+      if (rb === 0) analysis = 'No rollbacks recorded. Chain continuity is clean.';
+      else if (bp > 0 && (rb / bp) < 0.01) analysis = 'Rollback rate is low (' + rb + '/' + fmt(bp) + ' blocks). This is normal chain behavior.';
+      else if (bp > 0 && (rb / bp) < 0.05) analysis = 'Rollback rate is moderate (' + rb + '/' + fmt(bp) + ' blocks). Monitor peer stability.';
+      else analysis = 'Rollback rate is elevated (' + rb + '/' + fmt(bp) + ' blocks). Consider checking peer connections and network quality.';
+      html = sec('Diagnosis: Rollbacks', row('Rollbacks', fmt(rb)) + row('Blocks Processed', fmt(bp))) +
+        sec('Analysis', '<div class="g-out-row" style="line-height:1.6;">' + analysis + '</div>');
+    } else if (intent === 'what_next') {
+      var checks = [];
+      var ta2 = s.tip_age_seconds;
+      if (ta2 != null && ta2 > 120) checks.push('Tip age is ' + age(ta2) + '. Wait for sync to complete, or check peer connectivity.');
+      if (opipe.rollbacks > 20) checks.push('High rollback count (' + opipe.rollbacks + '). Review peer quality and network stability.');
+      if (s.status === 'critical') checks.push('Status is critical. Check if the node process is healthy and peers are reachable.');
+      if (s.status === 'warn') checks.push('Status is warn. Node may be catching up. Monitor tip age trend.');
+      if (recentBlocks.length > 0) checks.push('Chain is advancing: ' + recentBlocks.length + ' blocks in recent window.');
+      else if (recentBlocks.length === 0 && s.block != null) checks.push('No recent blocks in chain index. Node may have just restarted.');
+      if (checks.length === 0) checks.push('Node appears healthy. No immediate action needed.');
+      html = sec('What to Check Next', row('Status', s.status) + row('Tip Age', age(ta2)) + row('Rollbacks', fmt(opipe.rollbacks))) +
+        sec('Recommendations', '<div class="g-out-row" style="line-height:1.6;">' + checks.join('<br>') + '</div>');
+    } else if (intent === 'truth') {
+      var t = s.truth || {};
+      var tr = t.truth_ratio != null ? (t.truth_ratio * 100).toFixed(1) + '%' : DASH;
+      var ts = t.status || 'unknown';
+      var msg = '';
+      if (ts === 'truth_strong') msg = 'LMDB truth path is dominant. ' + tr + ' of blocks applied directly via LMDB.';
+      else if (ts === 'mixed') msg = 'Mixed coverage. ' + tr + ' truth, ' + (t.truth_ratio != null ? (100 - t.truth_ratio * 100).toFixed(1) : '?') + '% fallback. LMDB is accumulating but historical gaps remain.';
+      else if (ts === 'fallback_heavy') msg = 'Fallback-heavy. Only ' + tr + ' truth. Most blocks reference historical UTxOs not yet in LMDB. Backfill or longer runtime needed.';
+      else msg = 'Truth status unavailable.';
+      html = sec('LMDB Truth Status', row('Truth Ratio', tr) + row('Status', ts) + row('Truth Blocks', fmt(t.truth_blocks)) + row('Fallback Blocks', fmt(t.fallback_blocks)) + row('Preflight Full', fmt(t.preflight_full)) + row('Preflight Partial', fmt(t.preflight_partial)) + row('Preflight Zero', fmt(t.preflight_zero)) + row('Convergence Ready', t.convergence_ready ? 'Yes' : 'No')) +
+        sec('Analysis', '<div class="g-out-row" style="line-height:1.6;">' + msg + '</div>');
+    } else if (intent === 'why_fallback') {
+      var t2 = s.truth || {};
+      var pf = (t2.preflight_full || 0); var pp = (t2.preflight_partial || 0); var pz = (t2.preflight_zero || 0);
+      var explanation = 'Fallback occurs when a block consumes UTxOs not yet in LMDB. This happens because the LMDB store was seeded from a limited capture window.';
+      explanation += '<br><br>Preflight profile: ' + pf + ' full, ' + pp + ' partial, ' + pz + ' zero coverage blocks.';
+      if (pp + pz > 0 && pf === 0) explanation += '<br>No blocks have achieved full LMDB coverage yet. A backfill with wider capture data would help.';
+      else if (pf > 0 && pp + pz > 0) explanation += '<br>Some blocks succeed on the truth path. Coverage is improving as LMDB accumulates new UTxOs.';
+      html = sec('Why Fallback?', '<div class="g-out-row" style="line-height:1.6;">' + explanation + '</div>');
+    } else if (intent === 'recent') {
+      var entries = recentBlocks.slice(0, 5);
+      if (entries.length === 0) {
+        html = sec('Recent Blocks', '<div class="g-out-row">No recent blocks available.</div>');
+      } else {
+        var rows2 = '';
+        for (var ri = 0; ri < entries.length; ri++) {
+          var re = entries[ri];
+          var rh = re.hash || ''; if (rh.length > 16) rh = rh.slice(0,8) + '\u2026' + rh.slice(-8);
+          rows2 += row('Block ' + fmt(re.block_no), 'slot ' + fmt(re.slot) + '  hash ' + rh);
+        }
+        html = sec('Recent Blocks (' + entries.length + ')', rows2);
+      }
+    }
+    show(html);
+  });
+}
+
+document.getElementById('g-input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') runGuardian();
+});
+</script>
+</body>
+</html>

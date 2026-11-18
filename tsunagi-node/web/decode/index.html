@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TSUNAGI Block Decoder</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+--bg:#05080e;--bg-surface:#0a0f1a;--bg-card:rgba(12,18,30,0.65);
+--bg-card-hl:rgba(14,22,38,0.75);--border:rgba(80,120,180,0.10);
+--border-hover:rgba(80,120,180,0.28);--border-accent:rgba(80,140,220,0.35);
+--text:#d0d6e2;--text-m:#7a8598;--text-d:#4c5668;
+--accent:#3d6fa8;--accent-l:#5a8ec8;--white:#eceef3;
+--green:#3da86f;--green-bg:rgba(61,168,111,0.08);--green-border:rgba(61,168,111,0.20);
+--amber:#a89b3d;--amber-bg:rgba(168,155,61,0.08);--amber-border:rgba(168,155,61,0.20);
+--red:#a83d3d;--red-bg:rgba(168,61,61,0.08);--red-border:rgba(168,61,61,0.20);
+--mono:'SF Mono','Cascadia Code','Fira Code','Consolas',monospace;
+--sans:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter',Helvetica,Arial,sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.6;min-height:100vh;}
+
+/* Utility Bar */
+.ub{position:fixed;top:0;left:0;right:0;z-index:100;height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;background:rgba(5,8,14,0.92);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);}
+.ub-l{display:flex;align-items:center;gap:20px;}
+.ub-brand{font-size:0.82rem;font-weight:700;letter-spacing:0.14em;color:var(--white);text-decoration:none;}
+.ub-nav{display:flex;gap:6px;flex-wrap:wrap;}
+.ub-nav a{font-size:0.75rem;font-weight:500;letter-spacing:0.03em;color:var(--text-m);text-decoration:none;padding:5px 12px;border-radius:4px;border:1px solid transparent;transition:all 0.2s;}
+.ub-nav a:hover{color:var(--white);border-color:var(--border-accent);background:rgba(60,112,180,0.08);}
+.lang-switch{display:flex;align-items:center;gap:6px;margin-left:12px;font-size:0.75rem;white-space:nowrap;}
+.lang-switch a{text-decoration:none;color:var(--text-m);transition:color 0.2s ease;}
+.lang-switch a:hover{color:var(--text);}
+.lang-cur{color:var(--accent-l) !important;font-weight:600;}
+.lang-div{opacity:0.4;}
+
+/* Page Container */
+.pg{max-width:960px;margin:0 auto;padding:80px 28px 60px;}
+
+/* Hero / Title Block */
+.tb{text-align:center;margin-bottom:40px;}
+.tb h1{font-size:1.6rem;font-weight:700;color:var(--white);letter-spacing:0.04em;margin-bottom:8px;}
+.tb p{font-size:0.88rem;color:var(--text-m);letter-spacing:0.02em;margin-bottom:16px;}
+.tb-badges{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;}
+.badge{font-size:0.7rem;font-weight:600;letter-spacing:0.05em;padding:4px 12px;border-radius:4px;display:inline-flex;align-items:center;gap:6px;}
+.badge-blue{color:var(--accent-l);background:rgba(61,111,168,0.10);border:1px solid rgba(61,111,168,0.22);}
+.badge-green{color:var(--green);background:var(--green-bg);border:1px solid var(--green-border);}
+.pulse-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
+
+/* Section Labels */
+.sl{font-size:0.68rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-d);margin-bottom:14px;}
+
+/* Hero Panel */
+.hero-panel{background:var(--bg-card);border:1px solid var(--border);border-top:2px solid var(--accent);border-radius:6px;padding:24px 28px;margin-bottom:36px;}
+.hero-panel .sl{margin-bottom:18px;}
+.hp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+.hp-item{display:flex;flex-direction:column;gap:3px;}
+.hp-label{font-size:0.68rem;font-weight:500;color:var(--text-d);letter-spacing:0.06em;text-transform:uppercase;}
+.hp-val{font-size:0.92rem;font-weight:600;color:var(--white);font-family:var(--mono);letter-spacing:0.02em;word-break:break-all;}
+.hp-val.small{font-size:0.78rem;font-weight:500;color:var(--text);}
+
+/* Decode Pipeline */
+.pipeline-section{margin-bottom:36px;}
+.pipeline{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;justify-content:center;}
+.pipe-step{background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:16px 18px;text-align:center;flex:0 0 auto;min-width:120px;max-width:150px;transition:border-color 0.2s,background 0.2s;}
+.pipe-step:hover{border-color:var(--border-hover);background:var(--bg-card-hl);}
+.pipe-step-name{font-size:0.72rem;font-weight:600;letter-spacing:0.04em;color:var(--text-m);margin-bottom:6px;text-transform:uppercase;}
+.pipe-step-val{font-size:1.05rem;font-weight:700;color:var(--white);font-family:var(--mono);}
+.pipe-step-sub{font-size:0.65rem;color:var(--text-d);margin-top:4px;letter-spacing:0.03em;}
+.pipe-step.active{border-color:var(--border-accent);background:rgba(60,112,180,0.06);}
+.pipe-arrow{display:flex;align-items:center;justify-content:center;padding:0 6px;color:var(--text-d);font-size:1.1rem;font-weight:300;flex:0 0 auto;user-select:none;}
+.pipe-arrow span{display:block;width:28px;height:1px;background:var(--border-hover);position:relative;}
+.pipe-arrow span::after{content:'';position:absolute;right:0;top:-3px;border:solid var(--text-d);border-width:0 1px 1px 0;display:inline-block;padding:3px;transform:rotate(-45deg);}
+
+/* Card Grid */
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:36px;}
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:16px 18px;transition:border-color 0.2s,background 0.2s;}
+.card:hover{border-color:var(--border-hover);background:var(--bg-card-hl);}
+.card-label{font-size:0.68rem;font-weight:500;color:var(--text-d);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:6px;}
+.card-val{font-size:1.1rem;font-weight:700;color:var(--white);font-family:var(--mono);}
+.card-val.green{color:var(--green);}
+.card-val.amber{color:var(--amber);}
+.card-val.red{color:var(--red);}
+.card-val.positive{color:var(--green);}
+.card-val.negative{color:var(--red);}
+.card-val.neutral{color:var(--text-m);}
+.card.card-green{border-color:var(--green-border);background:var(--green-bg);}
+.card.card-amber{border-color:var(--amber-border);background:var(--amber-bg);}
+.card.card-red{border-color:var(--red-border);background:var(--red-bg);}
+
+/* Timeline Event */
+.tl-event{background:var(--bg-card);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:6px;padding:22px 24px;margin-bottom:36px;}
+.tl-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;}
+.tl-title{font-size:0.95rem;font-weight:700;color:var(--white);font-family:var(--mono);letter-spacing:0.02em;}
+.tl-badge{font-size:0.65rem;font-weight:600;letter-spacing:0.06em;padding:3px 10px;border-radius:3px;text-transform:uppercase;}
+.tl-badge.ok{color:var(--green);background:var(--green-bg);border:1px solid var(--green-border);}
+.tl-badge.warn{color:var(--amber);background:var(--amber-bg);border:1px solid var(--amber-border);}
+.tl-badge.err{color:var(--red);background:var(--red-bg);border:1px solid var(--red-border);}
+.tl-body{display:grid;grid-template-columns:1fr 1fr;gap:10px 28px;margin-bottom:16px;}
+.tl-row{display:flex;justify-content:space-between;align-items:baseline;padding:4px 0;border-bottom:1px solid var(--border);}
+.tl-row-label{font-size:0.72rem;color:var(--text-d);letter-spacing:0.04em;}
+.tl-row-val{font-size:0.78rem;font-weight:600;color:var(--text);font-family:var(--mono);}
+.tl-footer{display:flex;align-items:center;gap:8px;padding-top:4px;}
+.tl-dot{width:7px;height:7px;border-radius:50%;}
+.tl-dot.green{background:var(--green);}
+.tl-dot.amber{background:var(--amber);}
+.tl-dot.red{background:var(--red);}
+.tl-ts{font-size:0.7rem;color:var(--text-d);font-family:var(--mono);letter-spacing:0.02em;}
+
+/* Refresh Indicator */
+.refresh-bar{display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 0;margin-bottom:24px;}
+.refresh-bar span{font-size:0.7rem;color:var(--text-d);letter-spacing:0.04em;}
+.refresh-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse 2s ease-in-out infinite;}
+
+/* Error State */
+.error-box{display:none;background:var(--red-bg);border:1px solid var(--red-border);border-radius:6px;padding:18px 22px;margin-bottom:24px;text-align:center;}
+.error-box p{font-size:0.82rem;color:var(--red);font-weight:600;letter-spacing:0.03em;}
+.error-box .sub{font-size:0.72rem;color:var(--text-d);font-weight:400;margin-top:4px;}
+.dimmed{opacity:0.3;pointer-events:none;transition:opacity 0.4s;}
+
+/* Recent Blocks Table */
+.blocks-section{margin-top:36px;}
+.blocks-table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:0.78rem;}
+.blocks-table th{font-size:0.65rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-d);text-align:right;padding:8px 10px;border-bottom:1px solid var(--border);}
+.blocks-table th:first-child,.blocks-table td:first-child{text-align:left;}
+.blocks-table td{padding:7px 10px;border-bottom:1px solid rgba(80,120,180,0.06);color:var(--text);text-align:right;}
+.blocks-table tr:hover td{background:rgba(60,112,180,0.04);}
+.blocks-table .dt-pos{color:var(--green);}
+.blocks-table .dt-neg{color:var(--red);}
+.blocks-table .dt-zero{color:var(--text-d);}
+.blocks-empty{text-align:center;padding:32px 0;color:var(--text-d);font-size:0.82rem;}
+.btn-inspect{font-family:var(--mono);font-size:0.65rem;font-weight:600;letter-spacing:0.04em;color:var(--accent-l);background:rgba(60,112,180,0.08);border:1px solid var(--border-accent);border-radius:3px;padding:3px 10px;cursor:pointer;transition:all 0.2s;}
+.btn-inspect:hover{color:var(--white);background:rgba(60,112,180,0.15);border-color:var(--accent-l);}
+
+/* Block Detail Panel */
+.block-detail-panel{display:none;background:var(--bg-card);border:1px solid var(--border-accent);border-left:3px solid var(--accent);border-radius:6px;padding:22px 24px;margin-top:16px;margin-bottom:12px;}
+.block-detail-panel.visible{display:block;}
+.bdp-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.bdp-title{font-family:var(--mono);font-size:0.92rem;font-weight:700;color:var(--white);letter-spacing:0.02em;}
+.bdp-close{font-family:var(--mono);font-size:0.72rem;color:var(--text-d);cursor:pointer;padding:4px 10px;border:1px solid var(--border);border-radius:3px;background:transparent;transition:all 0.2s;}
+.bdp-close:hover{color:var(--white);border-color:var(--border-hover);}
+.bdp-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 28px;}
+.bdp-row{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;border-bottom:1px solid rgba(80,120,180,0.06);}
+.bdp-label{font-size:0.68rem;font-weight:600;letter-spacing:0.04em;color:var(--text-d);text-transform:uppercase;}
+.bdp-val{font-size:0.78rem;font-weight:600;color:var(--text);font-family:var(--mono);word-break:break-all;}
+.bdp-val.hash{font-size:0.72rem;color:var(--text-m);}
+.bdp-source{font-size:0.65rem;color:var(--text-d);margin-top:12px;font-family:var(--mono);}
+.bdp-txs-label{font-size:0.65rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-d);margin:16px 0 10px;padding-top:12px;border-top:1px solid var(--border);}
+.bdp-txs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;}
+.bdp-tx-card{background:var(--bg-surface);border:1px solid var(--border);border-radius:4px;padding:10px 12px;}
+.bdp-tx-idx{font-family:var(--mono);font-size:0.6rem;font-weight:600;letter-spacing:0.06em;color:var(--accent-l);margin-bottom:6px;text-transform:uppercase;}
+.bdp-tx-row{display:flex;justify-content:space-between;font-size:0.68rem;padding:1px 0;}
+.bdp-tx-lbl{color:var(--text-d);}
+.bdp-tx-val{color:var(--text);font-family:var(--mono);font-weight:600;}
+.bdp-trunc-note{font-size:0.68rem;color:var(--amber);font-family:var(--mono);margin-top:8px;padding:6px 10px;background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:3px;}
+.bdp-loading{font-size:0.72rem;color:var(--text-d);font-family:var(--mono);margin-top:12px;}
+
+/* Footer */
+.ft{text-align:center;padding:40px 0 32px;border-top:1px solid var(--border);margin-top:48px;}
+.ft p{font-size:0.78rem;color:var(--text-d);text-align:center;letter-spacing:0.03em;}
+.ft .fm{font-size:0.88rem;color:var(--text-m);font-weight:600;margin-bottom:8px;}
+
+/* Transaction Decode Cards */
+.txd-section{margin-bottom:36px;}
+.txd-header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;}
+.txd-block-info{font-size:0.78rem;font-weight:600;color:var(--white);font-family:var(--mono);}
+.txd-block-sub{font-size:0.68rem;color:var(--text-d);font-family:var(--mono);}
+.txd-card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;}
+.txd-card{background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:14px 16px;transition:border-color 0.2s;}
+.txd-card:hover{border-color:var(--border-hover);}
+.txd-card-idx{font-size:0.65rem;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--accent-l);margin-bottom:8px;font-family:var(--mono);}
+.txd-card-row{display:flex;justify-content:space-between;align-items:baseline;padding:2px 0;}
+.txd-card-label{font-size:0.65rem;color:var(--text-d);letter-spacing:0.04em;}
+.txd-card-val{font-size:0.78rem;font-weight:600;color:var(--text);font-family:var(--mono);}
+.txd-note{font-size:0.7rem;color:var(--amber);font-family:var(--mono);margin-top:10px;padding:8px 12px;background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:4px;}
+.txd-empty{text-align:center;padding:24px 0;color:var(--text-d);font-size:0.78rem;font-family:var(--mono);}
+.txd-meta-yes{color:var(--green);}
+.txd-meta-no{color:var(--text-d);}
+
+/* Responsive */
+@media(max-width:768px){
+  .hp-grid{grid-template-columns:repeat(2,1fr);}
+  .grid{grid-template-columns:repeat(2,1fr);}
+  .tl-body{grid-template-columns:1fr;}
+  .bdp-grid{grid-template-columns:1fr;}
+  .pipe-step{min-width:100px;max-width:130px;padding:12px 14px;}
+  .pipe-step-val{font-size:0.92rem;}
+  .ub-nav{display:none;}
+  .txd-card-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));}
+}
+@media(max-width:480px){
+  .hp-grid{grid-template-columns:1fr;}
+  .grid{grid-template-columns:1fr;}
+  .bdp-grid{grid-template-columns:1fr;}
+  .pipeline{flex-direction:column;align-items:center;}
+  .pipe-arrow{transform:rotate(90deg);padding:4px 0;}
+  .pipe-step{min-width:0;max-width:100%;width:100%;}
+  .tb h1{font-size:1.3rem;}
+  .txd-card-grid{grid-template-columns:1fr 1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- Utility Bar (shared) -->
+<div id="nav-container"></div>
+<script src="/assets/nav.js"></script>
+
+<div class="pg">
+
+  <!-- Hero Title Block -->
+  <div class="tb">
+    <h1>TSUNAGI Block Decoder</h1>
+    <p>Live deterministic block and ledger decode telemetry</p>
+    <div class="tb-badges">
+      <span class="badge badge-blue">Preview Network</span>
+      <span class="badge badge-green"><span class="pulse-dot"></span> Live Decode</span>
+    </div>
+  </div>
+
+  <!-- Refresh Indicator -->
+  <div class="refresh-bar">
+    <span class="refresh-dot"></span>
+    <span id="refresh-label">Auto-refresh every 10s</span>
+  </div>
+
+  <!-- Error Box -->
+  <div class="error-box" id="error-box">
+    <p>Decoder Unavailable</p>
+    <p class="sub">Unable to reach /status.json &mdash; retrying every 10 seconds</p>
+  </div>
+
+  <div id="panels">
+
+    <!-- Decoder Overview Panel -->
+    <div class="hero-panel">
+      <div class="sl">Decoder Overview</div>
+      <div class="hp-grid">
+        <div class="hp-item">
+          <span class="hp-label">Latest Block</span>
+          <span class="hp-val" id="hp-block">&mdash;</span>
+        </div>
+        <div class="hp-item">
+          <span class="hp-label">Latest Slot</span>
+          <span class="hp-val" id="hp-slot">&mdash;</span>
+        </div>
+        <div class="hp-item">
+          <span class="hp-label">Tx Count</span>
+          <span class="hp-val" id="hp-tx">&mdash;</span>
+        </div>
+        <div class="hp-item">
+          <span class="hp-label">Primary Mode</span>
+          <span class="hp-val small" id="hp-mode">&mdash;</span>
+        </div>
+        <div class="hp-item">
+          <span class="hp-label">Shadow Verification</span>
+          <span class="hp-val small" id="hp-shadow">&mdash;</span>
+        </div>
+        <div class="hp-item">
+          <span class="hp-label">Tip Hash</span>
+          <span class="hp-val small" id="hp-tip">&mdash;</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Decode Pipeline -->
+    <div class="pipeline-section">
+      <div class="sl">Decode Pipeline</div>
+      <div class="pipeline">
+        <div class="pipe-step active" id="ps-block">
+          <div class="pipe-step-name">Block</div>
+          <div class="pipe-step-val" id="pv-block">&mdash;</div>
+          <div class="pipe-step-sub">received</div>
+        </div>
+        <div class="pipe-arrow"><span></span></div>
+        <div class="pipe-step" id="ps-tx">
+          <div class="pipe-step-name">Tx Decode</div>
+          <div class="pipe-step-val" id="pv-tx">&mdash;</div>
+          <div class="pipe-step-sub">transactions</div>
+        </div>
+        <div class="pipe-arrow"><span></span></div>
+        <div class="pipe-step" id="ps-consumed">
+          <div class="pipe-step-name">Consumed UTxO</div>
+          <div class="pipe-step-val" id="pv-consumed">&mdash;</div>
+          <div class="pipe-step-sub">inputs</div>
+        </div>
+        <div class="pipe-arrow"><span></span></div>
+        <div class="pipe-step" id="ps-produced">
+          <div class="pipe-step-name">Produced UTxO</div>
+          <div class="pipe-step-val" id="pv-produced">&mdash;</div>
+          <div class="pipe-step-sub">outputs</div>
+        </div>
+        <div class="pipe-arrow"><span></span></div>
+        <div class="pipe-step" id="ps-ledger">
+          <div class="pipe-step-name">Ledger Apply</div>
+          <div class="pipe-step-val" id="pv-delta">&mdash;</div>
+          <div class="pipe-step-sub">utxo delta</div>
+        </div>
+        <div class="pipe-arrow"><span></span></div>
+        <div class="pipe-step" id="ps-shadow">
+          <div class="pipe-step-name">Shadow Verify</div>
+          <div class="pipe-step-val" id="pv-coverage">&mdash;</div>
+          <div class="pipe-step-sub">coverage</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Current Decode Detail -->
+    <div>
+      <div class="sl">Current Decode Detail</div>
+      <div class="grid">
+        <div class="card">
+          <div class="card-label">Tx Count</div>
+          <div class="card-val" id="c-tx">&mdash;</div>
+        </div>
+        <div class="card">
+          <div class="card-label">UTxO Consumed</div>
+          <div class="card-val" id="c-consumed">&mdash;</div>
+        </div>
+        <div class="card">
+          <div class="card-label">UTxO Produced</div>
+          <div class="card-val" id="c-produced">&mdash;</div>
+        </div>
+        <div class="card" id="c-delta-card">
+          <div class="card-label">UTxO Delta</div>
+          <div class="card-val" id="c-delta">&mdash;</div>
+        </div>
+        <div class="card" id="c-fallback-card">
+          <div class="card-label">Fallback Used</div>
+          <div class="card-val" id="c-fallback">&mdash;</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Coverage Total</div>
+          <div class="card-val" id="c-cov-total">&mdash;</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Coverage Found</div>
+          <div class="card-val" id="c-cov-found">&mdash;</div>
+        </div>
+        <div class="card" id="c-tipage-card">
+          <div class="card-label">Tip Age</div>
+          <div class="card-val" id="c-tipage">&mdash;</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Last Updated</div>
+          <div class="card-val" id="c-updated" style="font-size:0.78rem;">&mdash;</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Transaction Decode (from /decode.json — real runtime data) -->
+    <div class="txd-section" id="txd-section">
+      <div class="sl">Transaction Decode</div>
+      <div id="txd-content">
+        <p class="txd-empty" id="txd-empty">Waiting for decode data&hellip;</p>
+        <div id="txd-header" style="display:none;">
+          <div class="txd-header">
+            <span class="txd-block-info" id="txd-block-info"></span>
+            <span class="txd-block-sub" id="txd-block-sub"></span>
+          </div>
+        </div>
+        <div class="txd-card-grid" id="txd-cards"></div>
+        <div id="txd-note-wrap" style="display:none;">
+          <p class="txd-note" id="txd-note"></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Decoded Event -->
+    <div>
+      <div class="sl">Decoded Event</div>
+      <div class="tl-event" id="tl-event">
+        <div class="tl-header">
+          <span class="tl-title" id="tl-title">Block &mdash; decoded</span>
+          <span class="tl-badge ok" id="tl-badge">SYNCING</span>
+        </div>
+        <div class="tl-body">
+          <div class="tl-row">
+            <span class="tl-row-label">Slot</span>
+            <span class="tl-row-val" id="tl-slot">&mdash;</span>
+          </div>
+          <div class="tl-row">
+            <span class="tl-row-label">Primary Mode</span>
+            <span class="tl-row-val" id="tl-mode">&mdash;</span>
+          </div>
+          <div class="tl-row">
+            <span class="tl-row-label">Shadow Verification</span>
+            <span class="tl-row-val" id="tl-shadow">&mdash;</span>
+          </div>
+          <div class="tl-row">
+            <span class="tl-row-label">Coverage</span>
+            <span class="tl-row-val" id="tl-coverage">&mdash;</span>
+          </div>
+          <div class="tl-row">
+            <span class="tl-row-label">Tip Age</span>
+            <span class="tl-row-val" id="tl-tipage">&mdash;</span>
+          </div>
+          <div class="tl-row">
+            <span class="tl-row-label">Updated</span>
+            <span class="tl-row-val" id="tl-updated">&mdash;</span>
+          </div>
+        </div>
+        <div class="tl-footer">
+          <span class="tl-dot green" id="tl-dot"></span>
+          <span class="tl-ts" id="tl-ts">&mdash;</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Blocks -->
+    <div class="blocks-section">
+      <div class="sl">Recent Blocks</div>
+      <div id="blocks-table-wrap">
+        <p class="blocks-empty" id="blocks-empty">Waiting for block data&hellip;</p>
+        <table class="blocks-table" id="blocks-table" style="display:none;">
+          <thead>
+            <tr>
+              <th>Block</th>
+              <th>Slot</th>
+              <th>TX</th>
+              <th>Consumed</th>
+              <th>Produced</th>
+              <th>&Delta; UTxO</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="blocks-tbody"></tbody>
+        </table>
+      </div>
+      <!-- Block Detail Panel (shown on Inspect click) -->
+      <div class="block-detail-panel" id="block-detail-panel">
+        <div class="bdp-header">
+          <span class="bdp-title" id="bdp-title">Block Detail</span>
+          <button class="bdp-close" id="bdp-close">Close</button>
+        </div>
+        <div class="bdp-grid">
+          <div class="bdp-row"><span class="bdp-label">Block</span><span class="bdp-val" id="bdp-block">&mdash;</span></div>
+          <div class="bdp-row"><span class="bdp-label">Slot</span><span class="bdp-val" id="bdp-slot">&mdash;</span></div>
+          <div class="bdp-row"><span class="bdp-label">TX Count</span><span class="bdp-val" id="bdp-tx">&mdash;</span></div>
+          <div class="bdp-row"><span class="bdp-label">UTxO Consumed</span><span class="bdp-val" id="bdp-consumed">&mdash;</span></div>
+          <div class="bdp-row"><span class="bdp-label">UTxO Produced</span><span class="bdp-val" id="bdp-produced">&mdash;</span></div>
+          <div class="bdp-row"><span class="bdp-label">UTxO Delta</span><span class="bdp-val" id="bdp-delta">&mdash;</span></div>
+          <div class="bdp-row"><span class="bdp-label">Block Hash</span><span class="bdp-val hash" id="bdp-hash">&mdash;</span></div>
+          <div class="bdp-row"><span class="bdp-label">Timestamp</span><span class="bdp-val" id="bdp-ts">&mdash;</span></div>
+        </div>
+        <div class="bdp-source" id="bdp-source"></div>
+        <div id="bdp-txs-wrap" style="display:none;">
+          <div class="bdp-txs-label">Transaction Decode</div>
+          <div class="bdp-txs-grid" id="bdp-txs-grid"></div>
+          <div id="bdp-trunc-wrap" style="display:none;">
+            <p class="bdp-trunc-note" id="bdp-trunc-note"></p>
+          </div>
+        </div>
+        <p class="bdp-loading" id="bdp-loading" style="display:none;">Loading decode data&hellip;</p>
+      </div>
+    </div>
+
+  </div><!-- /panels -->
+
+  <!-- Footer -->
+  <div class="ft">
+    <p class="fm">Let It Run. Let It Resolve.</p>
+    <p>tsunagi.tech &middot; Independent Cardano infrastructure research</p>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  var panels = document.getElementById('panels');
+  var errorBox = document.getElementById('error-box');
+  var refreshLabel = document.getElementById('refresh-label');
+  var dash = '\u2014';
+
+  function v(d, key) {
+    var val = d[key];
+    if (val === undefined || val === null || val === '') return dash;
+    return val;
+  }
+
+  function num(d, key) {
+    var val = d[key];
+    if (val === undefined || val === null || val === '') return dash;
+    return Number(val).toLocaleString();
+  }
+
+  function truncHash(h) {
+    if (!h || h === dash) return dash;
+    var s = String(h);
+    if (s.length <= 16) return s;
+    return s.slice(0, 8) + '\u2026' + s.slice(-8);
+  }
+
+  function formatAge(sec) {
+    if (sec === undefined || sec === null || sec === '') return dash;
+    var n = Number(sec);
+    if (isNaN(n)) return dash;
+    if (n < 60) return n + 's';
+    if (n < 3600) return Math.floor(n / 60) + 'm ' + (n % 60) + 's';
+    return Math.floor(n / 3600) + 'h ' + Math.floor((n % 3600) / 60) + 'm';
+  }
+
+  function tipAgeClass(sec) {
+    if (sec === undefined || sec === null || sec === '') return '';
+    var n = Number(sec);
+    if (isNaN(n)) return '';
+    if (n > 600) return 'red';
+    if (n > 120) return 'amber';
+    return 'green';
+  }
+
+  function deltaSign(val) {
+    if (val === undefined || val === null || val === '') return { text: dash, cls: 'neutral' };
+    var n = Number(val);
+    if (isNaN(n)) return { text: dash, cls: 'neutral' };
+    if (n > 0) return { text: '+' + n.toLocaleString(), cls: 'positive' };
+    if (n < 0) return { text: n.toLocaleString(), cls: 'negative' };
+    return { text: '0', cls: 'neutral' };
+  }
+
+  function statusBadge(status) {
+    var s = String(status || '').toLowerCase();
+    if (s === 'ok' || s === 'synced' || s === 'following') return { text: s.toUpperCase(), cls: 'ok' };
+    if (s === 'syncing' || s === 'catching_up') return { text: s.toUpperCase(), cls: 'warn' };
+    return { text: (status || 'UNKNOWN').toUpperCase(), cls: 'err' };
+  }
+
+  function dotColor(sec) {
+    var c = tipAgeClass(sec);
+    if (c === 'red') return 'red';
+    if (c === 'amber') return 'amber';
+    return 'green';
+  }
+
+  function update(d) {
+    // Hero panel
+    document.getElementById('hp-block').textContent = num(d, 'block');
+    document.getElementById('hp-slot').textContent = num(d, 'slot');
+    document.getElementById('hp-tx').textContent = num(d, 'tx_count');
+    document.getElementById('hp-mode').textContent = v(d, 'primary_mode');
+    document.getElementById('hp-shadow').textContent = v(d, 'shadow_enabled');
+    document.getElementById('hp-tip').textContent = truncHash(v(d, 'tip_hash'));
+
+    // Pipeline
+    document.getElementById('pv-block').textContent = num(d, 'block');
+    document.getElementById('pv-tx').textContent = num(d, 'tx_count');
+    document.getElementById('pv-consumed').textContent = num(d, 'utxo_consumed');
+    document.getElementById('pv-produced').textContent = num(d, 'utxo_produced');
+    var dlt = deltaSign(d.utxo_delta);
+    document.getElementById('pv-delta').textContent = dlt.text;
+    var covF = v(d, 'coverage_found');
+    var covT = v(d, 'coverage_total');
+    document.getElementById('pv-coverage').textContent = (covF !== dash && covT !== dash) ? covF + '/' + covT : dash;
+
+    // Activate pipeline steps when data present
+    var steps = ['ps-block','ps-tx','ps-consumed','ps-produced','ps-ledger','ps-shadow'];
+    var keys = ['block','tx_count','utxo_consumed','utxo_produced','utxo_delta','coverage_total'];
+    for (var i = 0; i < steps.length; i++) {
+      var el = document.getElementById(steps[i]);
+      if (d[keys[i]] !== undefined && d[keys[i]] !== null && d[keys[i]] !== '') {
+        el.classList.add('active');
+      } else {
+        el.classList.remove('active');
+      }
+    }
+
+    // Detail cards
+    document.getElementById('c-tx').textContent = num(d, 'tx_count');
+    document.getElementById('c-consumed').textContent = num(d, 'utxo_consumed');
+    document.getElementById('c-produced').textContent = num(d, 'utxo_produced');
+
+    var delta = deltaSign(d.utxo_delta);
+    var cDelta = document.getElementById('c-delta');
+    cDelta.textContent = delta.text;
+    cDelta.className = 'card-val ' + delta.cls;
+
+    // Fallback
+    var fb = v(d, 'fallback_used');
+    var cFallback = document.getElementById('c-fallback');
+    var cFallbackCard = document.getElementById('c-fallback-card');
+    if (fb === dash) {
+      cFallback.textContent = dash;
+      cFallbackCard.className = 'card';
+    } else if (fb === true || fb === 'true' || fb === 'yes' || fb === 'YES') {
+      cFallback.textContent = 'YES';
+      cFallback.className = 'card-val amber';
+      cFallbackCard.className = 'card card-amber';
+    } else {
+      cFallback.textContent = 'NO';
+      cFallback.className = 'card-val green';
+      cFallbackCard.className = 'card card-green';
+    }
+
+    document.getElementById('c-cov-total').textContent = num(d, 'coverage_total');
+    document.getElementById('c-cov-found').textContent = num(d, 'coverage_found');
+
+    // Tip age
+    var age = d.tip_age_seconds;
+    var cTipage = document.getElementById('c-tipage');
+    cTipage.textContent = formatAge(age);
+    var ageCls = tipAgeClass(age);
+    cTipage.className = 'card-val' + (ageCls ? ' ' + ageCls : '');
+    var tipCard = document.getElementById('c-tipage-card');
+    if (ageCls === 'red') tipCard.className = 'card card-red';
+    else if (ageCls === 'amber') tipCard.className = 'card card-amber';
+    else tipCard.className = 'card';
+
+    document.getElementById('c-updated').textContent = v(d, 'updated_at');
+
+    // Timeline event
+    var blk = v(d, 'block');
+    document.getElementById('tl-title').textContent = 'Block ' + (blk !== dash ? blk : dash) + ' decoded';
+    var sb = statusBadge(d.status);
+    var tlBadge = document.getElementById('tl-badge');
+    tlBadge.textContent = sb.text;
+    tlBadge.className = 'tl-badge ' + sb.cls;
+
+    document.getElementById('tl-slot').textContent = num(d, 'slot');
+    document.getElementById('tl-mode').textContent = v(d, 'primary_mode');
+    document.getElementById('tl-shadow').textContent = v(d, 'shadow_enabled');
+    document.getElementById('tl-coverage').textContent = (covF !== dash && covT !== dash) ? covF + ' / ' + covT : dash;
+    document.getElementById('tl-tipage').textContent = formatAge(age);
+    document.getElementById('tl-updated').textContent = v(d, 'updated_at');
+
+    var tlDot = document.getElementById('tl-dot');
+    tlDot.className = 'tl-dot ' + dotColor(age);
+    document.getElementById('tl-ts').textContent = v(d, 'updated_at');
+
+    // Event left border color
+    var evt = document.getElementById('tl-event');
+    if (ageCls === 'red') evt.style.borderLeftColor = 'var(--red)';
+    else if (ageCls === 'amber') evt.style.borderLeftColor = 'var(--amber)';
+    else evt.style.borderLeftColor = 'var(--accent)';
+  }
+
+  function showError() {
+    errorBox.style.display = 'block';
+    panels.classList.add('dimmed');
+    refreshLabel.textContent = 'Retrying\u2026';
+  }
+
+  function hideError() {
+    errorBox.style.display = 'none';
+    panels.classList.remove('dimmed');
+    refreshLabel.textContent = 'Auto-refresh every 10s';
+  }
+
+  function fetchStatus() {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', '/data/status.json?t=' + Date.now(), true);
+    xhr.timeout = 8000;
+    xhr.onload = function() {
+      if (xhr.status === 200) {
+        try {
+          var d = JSON.parse(xhr.responseText);
+          hideError();
+          update(d);
+        } catch(e) {
+          showError();
+        }
+      } else {
+        showError();
+      }
+    };
+    xhr.onerror = function() { showError(); };
+    xhr.ontimeout = function() { showError(); };
+    xhr.send();
+  }
+
+  fetchStatus();
+  setInterval(fetchStatus, 10000);
+
+  // ── Recent Blocks Table + Drilldown ──
+  var blocksTable = document.getElementById('blocks-table');
+  var blocksTbody = document.getElementById('blocks-tbody');
+  var blocksEmpty = document.getElementById('blocks-empty');
+  var detailPanel = document.getElementById('block-detail-panel');
+  var cachedBlocks = [];
+
+  function deltaClass(n) {
+    if (n > 0) return 'dt-pos';
+    if (n < 0) return 'dt-neg';
+    return 'dt-zero';
+  }
+
+  function deltaText(n) {
+    if (n > 0) return '+' + Number(n).toLocaleString();
+    if (n < 0) return Number(n).toLocaleString();
+    return '0';
+  }
+
+  function showBlockDetail(block) {
+    document.getElementById('bdp-title').textContent = 'Block ' + (block.block != null ? Number(block.block).toLocaleString() : dash);
+    document.getElementById('bdp-block').textContent = block.block != null ? Number(block.block).toLocaleString() : dash;
+    document.getElementById('bdp-slot').textContent = block.slot != null ? Number(block.slot).toLocaleString() : dash;
+    document.getElementById('bdp-tx').textContent = block.tx_count != null ? Number(block.tx_count).toLocaleString() : dash;
+    document.getElementById('bdp-consumed').textContent = block.utxo_consumed != null ? Number(block.utxo_consumed).toLocaleString() : dash;
+    document.getElementById('bdp-produced').textContent = block.utxo_produced != null ? Number(block.utxo_produced).toLocaleString() : dash;
+    var d = block.utxo_delta != null ? Number(block.utxo_delta) : 0;
+    var dEl = document.getElementById('bdp-delta');
+    dEl.textContent = deltaText(d);
+    dEl.className = 'bdp-val ' + deltaClass(d);
+    document.getElementById('bdp-hash').textContent = block.block_hash || dash;
+    document.getElementById('bdp-ts').textContent = block.timestamp || dash;
+    document.getElementById('bdp-source').textContent = 'Source: blocks.json \u2022 recent retained history';
+
+    // Reset per-tx section
+    var txsWrap = document.getElementById('bdp-txs-wrap');
+    var txsGrid = document.getElementById('bdp-txs-grid');
+    var truncWrap = document.getElementById('bdp-trunc-wrap');
+    var loadingEl = document.getElementById('bdp-loading');
+    txsWrap.style.display = 'none';
+    txsGrid.innerHTML = '';
+    truncWrap.style.display = 'none';
+    loadingEl.style.display = 'none';
+
+    detailPanel.classList.add('visible');
+    detailPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    // Fetch per-block detail with per-tx data
+    if (block.block != null) {
+      loadingEl.style.display = 'block';
+      var xhr2 = new XMLHttpRequest();
+      xhr2.open('GET', '/data/block-detail/' + block.block + '.json?t=' + Date.now(), true);
+      xhr2.timeout = 5000;
+      xhr2.onload = function() {
+        loadingEl.style.display = 'none';
+        if (xhr2.status === 200) {
+          try {
+            var detail = JSON.parse(xhr2.responseText);
+            var txs = detail.transactions;
+            if (txs && txs.length > 0) {
+              txsWrap.style.display = 'block';
+              for (var t = 0; t < txs.length; t++) {
+                var tx = txs[t];
+                var card = document.createElement('div');
+                card.className = 'bdp-tx-card';
+                var feeStr = tx.fee != null ? (Number(tx.fee) / 1000000).toFixed(3) + ' ADA' : dash;
+                card.innerHTML =
+                  '<div class="bdp-tx-idx">TX #' + tx.index + '</div>' +
+                  '<div class="bdp-tx-row"><span class="bdp-tx-lbl">Inputs</span><span class="bdp-tx-val">' + tx.inputs + '</span></div>' +
+                  '<div class="bdp-tx-row"><span class="bdp-tx-lbl">Outputs</span><span class="bdp-tx-val">' + tx.outputs + '</span></div>' +
+                  '<div class="bdp-tx-row"><span class="bdp-tx-lbl">Fee</span><span class="bdp-tx-val">' + feeStr + '</span></div>' +
+                  '<div class="bdp-tx-row"><span class="bdp-tx-lbl">Metadata</span><span class="bdp-tx-val">' + (tx.metadata ? 'Yes' : 'No') + '</span></div>';
+                txsGrid.appendChild(card);
+              }
+              if (detail.truncated) {
+                truncWrap.style.display = 'block';
+                document.getElementById('bdp-trunc-note').textContent =
+                  'Block contained more transactions \u2014 display truncated at MAX_TX_PER_BLOCK (32)';
+              }
+              document.getElementById('bdp-source').textContent =
+                'Source: journal.ndjson + tx_decode.ndjson \u2022 recent retained history';
+            }
+          } catch(e) {}
+        }
+      };
+      xhr2.onerror = function() { loadingEl.style.display = 'none'; };
+      xhr2.ontimeout = function() { loadingEl.style.display = 'none'; };
+      xhr2.send();
+    }
+  }
+
+  document.getElementById('bdp-close').addEventListener('click', function() {
+    detailPanel.classList.remove('visible');
+  });
+
+  function updateBlocks(data) {
+    var recent = data.recent;
+    if (!recent || recent.length === 0) return;
+    cachedBlocks = recent;
+    blocksEmpty.style.display = 'none';
+    blocksTable.style.display = 'table';
+    blocksTbody.innerHTML = '';
+    for (var i = 0; i < recent.length; i++) {
+      var r = recent[i];
+      var tr = document.createElement('tr');
+      var d = r.utxo_delta != null ? Number(r.utxo_delta) : 0;
+      tr.innerHTML =
+        '<td>' + (r.block != null ? Number(r.block).toLocaleString() : dash) + '</td>' +
+        '<td>' + (r.slot != null ? Number(r.slot).toLocaleString() : dash) + '</td>' +
+        '<td>' + (r.tx_count != null ? Number(r.tx_count).toLocaleString() : dash) + '</td>' +
+        '<td>' + (r.utxo_consumed != null ? Number(r.utxo_consumed).toLocaleString() : dash) + '</td>' +
+        '<td>' + (r.utxo_produced != null ? Number(r.utxo_produced).toLocaleString() : dash) + '</td>' +
+        '<td class="' + deltaClass(d) + '">' + deltaText(d) + '</td>' +
+        '<td><button class="btn-inspect" data-idx="' + i + '">Inspect</button></td>';
+      blocksTbody.appendChild(tr);
+    }
+    // Attach inspect click handlers
+    var btns = blocksTbody.querySelectorAll('.btn-inspect');
+    for (var j = 0; j < btns.length; j++) {
+      btns[j].addEventListener('click', function() {
+        var idx = parseInt(this.getAttribute('data-idx'), 10);
+        if (cachedBlocks[idx]) showBlockDetail(cachedBlocks[idx]);
+      });
+    }
+  }
+
+  function fetchBlocks() {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', '/data/blocks.json?t=' + Date.now(), true);
+    xhr.timeout = 8000;
+    xhr.onload = function() {
+      if (xhr.status === 200) {
+        try { updateBlocks(JSON.parse(xhr.responseText)); } catch(e) {}
+      }
+    };
+    xhr.onerror = function() {};
+    xhr.ontimeout = function() {};
+    xhr.send();
+  }
+
+  fetchBlocks();
+  setInterval(fetchBlocks, 10000);
+
+  // -- Transaction Decode (from /decode.json) --
+  function fmtFee(fee) {
+    if (fee == null) return '\u2014';
+    var ada = (Number(fee) / 1000000).toFixed(3);
+    return ada + ' ADA';
+  }
+
+  function updateDecode(data) {
+    var blocks = data.blocks;
+    if (!blocks || blocks.length === 0) return;
+    var b = blocks[0]; // newest first
+    document.getElementById('txd-empty').style.display = 'none';
+    document.getElementById('txd-header').style.display = 'block';
+    document.getElementById('txd-block-info').textContent =
+      'Block ' + (b.block != null ? Number(b.block).toLocaleString() : '\u2014') +
+      ' \u00b7 ' + (b.tx_count || 0) + ' transactions';
+    document.getElementById('txd-block-sub').textContent =
+      'Slot ' + (b.slot != null ? Number(b.slot).toLocaleString() : '\u2014') +
+      (b.block_hash ? ' \u00b7 ' + b.block_hash.substring(0, 16) + '\u2026' : '');
+
+    var cards = document.getElementById('txd-cards');
+    cards.innerHTML = '';
+    var txs = b.transactions || [];
+    if (txs.length === 0) {
+      cards.innerHTML = '<p class="txd-empty">No transactions in this block</p>';
+    }
+    for (var i = 0; i < txs.length; i++) {
+      var tx = txs[i];
+      var card = document.createElement('div');
+      card.className = 'txd-card';
+      card.innerHTML =
+        '<div class="txd-card-idx">TX #' + tx.index + '</div>' +
+        '<div class="txd-card-row"><span class="txd-card-label">Inputs</span><span class="txd-card-val">' + tx.inputs + '</span></div>' +
+        '<div class="txd-card-row"><span class="txd-card-label">Outputs</span><span class="txd-card-val">' + tx.outputs + '</span></div>' +
+        '<div class="txd-card-row"><span class="txd-card-label">Fee</span><span class="txd-card-val">' + fmtFee(tx.fee) + '</span></div>' +
+        '<div class="txd-card-row"><span class="txd-card-label">Metadata</span><span class="txd-card-val ' +
+        (tx.metadata ? 'txd-meta-yes' : 'txd-meta-no') + '">' + (tx.metadata ? 'Yes' : 'No') + '</span></div>';
+      cards.appendChild(card);
+    }
+
+    var noteWrap = document.getElementById('txd-note-wrap');
+    if (b.truncated) {
+      noteWrap.style.display = 'block';
+      document.getElementById('txd-note').textContent =
+        'Block contained more than ' + txs.length + ' transactions \u2014 display truncated at MAX_TX_PER_BLOCK (32)';
+    } else {
+      noteWrap.style.display = 'none';
+    }
+  }
+
+  function fetchDecode() {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', '/data/decode.json?t=' + Date.now(), true);
+    xhr.timeout = 8000;
+    xhr.onload = function() {
+      if (xhr.status === 200) {
+        try { updateDecode(JSON.parse(xhr.responseText)); } catch(e) {}
+      }
+    };
+    xhr.onerror = function() {};
+    xhr.ontimeout = function() {};
+    xhr.send();
+  }
+
+  fetchDecode();
+  setInterval(fetchDecode, 10000);
+})();
+</script>
+
+</body>
+</html>

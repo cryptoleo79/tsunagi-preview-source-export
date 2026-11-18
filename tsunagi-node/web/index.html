@@ -1,0 +1,1582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TSUNAGI — Deterministic Cardano Node</title>
+<meta name="description" content="TSUNAGI — A Zig-native Cardano node with chain following, transaction admission, TxSubmission2, and an integrated eight-layer signed trust stack.">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #05080e;
+  --bg-surface: #0a0f1a;
+  --bg-card: rgba(12, 18, 30, 0.65);
+  --bg-card-hover: rgba(16, 24, 40, 0.8);
+  --border: rgba(80, 120, 180, 0.10);
+  --border-hover: rgba(80, 120, 180, 0.28);
+  --border-accent: rgba(80, 140, 220, 0.35);
+  --text: #d0d6e2;
+  --text-muted: #7a8598;
+  --text-dim: #4c5668;
+  --accent: #3d6fa8;
+  --accent-light: #5a8ec8;
+  --accent-glow: rgba(60, 112, 180, 0.12);
+  --accent-glow-strong: rgba(60, 112, 180, 0.25);
+  --white: #eceef3;
+  --mono: 'SF Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Helvetica, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+
+canvas#grid-bg {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.page-wrap {
+  position: relative;
+  z-index: 1;
+}
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 28px;
+}
+
+/* ── Nav ── */
+
+.ub {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  background: rgba(5, 8, 14, 0.92);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border);
+}
+
+.ub-l {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.ub-brand {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--white);
+  text-decoration: none;
+}
+
+.ub-nav {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ub-nav a {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+  text-decoration: none;
+  padding: 5px 12px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  transition: all 0.2s;
+}
+
+.ub-nav a:hover {
+  color: var(--white);
+  border-color: var(--border-accent);
+  background: rgba(60, 112, 180, 0.08);
+}
+
+.lang-switch {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 12px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.lang-switch a {
+  text-decoration: none;
+  color: var(--text-muted);
+  transition: color 0.2s ease;
+}
+
+.lang-switch a:hover {
+  color: var(--text);
+}
+
+.lang-cur {
+  color: var(--accent-light) !important;
+  font-weight: 600;
+}
+
+.lang-div {
+  opacity: 0.4;
+}
+
+/* ── Hero ── */
+
+.hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 140px 0 80px;
+  gap: 12px;
+  position: relative;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(50, 100, 170, 0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.hero-logo {
+  width: 520px;
+  max-width: 80vw;
+  height: auto;
+  margin-bottom: 20px;
+  border-radius: 16px;
+  opacity: 0.98;
+
+  filter:
+    drop-shadow(0 0 18px rgba(80,150,255,0.35))
+    drop-shadow(0 0 30px rgba(60,112,180,0.20))
+    drop-shadow(0 0 70px rgba(60,112,180,0.10));
+
+  animation: logoGlow 6s ease-in-out infinite;
+}
+
+.hero-title {
+  font-size: 4.8rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: var(--white);
+  margin-bottom: 12px;
+  position: relative;
+}
+
+.hero-subtitle {
+  font-size: 1.05rem;
+  font-weight: 400;
+  color: var(--text-muted);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-top: 0;
+  margin-bottom: 40px;
+}
+
+.hero-motto {
+  font-size: 1.5rem;
+  font-weight: 500;
+  color: var(--white);
+  margin-bottom: 28px;
+  letter-spacing: 0.01em;
+  font-style: italic;
+}
+
+.hero-desc {
+  font-size: 1rem;
+  color: var(--text-muted);
+  max-width: 560px;
+  margin: 0 auto 28px;
+  line-height: 1.85;
+}
+
+/* ── Hero Divider ── */
+
+.hero-divider {
+  width: 100%;
+  max-width: 520px;
+  height: 1px;
+  margin: 4px auto 18px;
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0) 0%,
+    rgba(120,140,180,0.20) 20%,
+    rgba(120,140,180,0.35) 50%,
+    rgba(120,140,180,0.20) 80%,
+    rgba(255,255,255,0) 100%
+  );
+}
+
+/* ── Live Telemetry Strip ── */
+
+.tele-strip {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 auto 40px;
+  max-width: 640px;
+}
+
+.tele-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.03em;
+  background: rgba(12, 18, 30, 0.6);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  transition: border-color 0.2s;
+}
+
+.tele-pill:hover {
+  border-color: var(--border-hover);
+}
+
+.tele-label {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  font-size: 0.6rem;
+}
+
+.tele-val {
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.tele-val.t-healthy { color: #3da86f; }
+.tele-val.t-warn { color: #a89b3d; }
+.tele-val.t-critical { color: #a83d3d; }
+
+.tele-strip.t-unavailable .tele-pill {
+  opacity: 0.35;
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+.btn {
+  display: inline-block;
+  padding: 11px 26px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-decoration: none;
+  border-radius: 5px;
+  transition: all 0.25s ease;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--white);
+  border: 1px solid rgba(80, 140, 220, 0.3);
+}
+
+.btn-primary:hover {
+  background: var(--accent-light);
+  box-shadow: 0 0 28px var(--accent-glow-strong), 0 0 8px var(--accent-glow);
+}
+
+.btn-outline {
+  background: rgba(12, 18, 30, 0.5);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.btn-outline:hover {
+  border-color: var(--border-hover);
+  background: rgba(60, 112, 180, 0.06);
+  color: var(--white);
+}
+
+/* ── Status Strip ── */
+
+.status-strip {
+  padding: 28px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background: rgba(8, 12, 20, 0.6);
+}
+
+.status-inner {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 16px;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  background: rgba(12, 18, 30, 0.6);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-light);
+  box-shadow: 0 0 6px var(--accent-glow-strong);
+}
+
+/* ── Sections ── */
+
+section {
+  padding: 100px 0;
+}
+
+.section-label {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 12px;
+}
+
+.section-title {
+  font-size: 2rem;
+  font-weight: 600;
+  color: var(--white);
+  margin-bottom: 16px;
+  letter-spacing: 0.02em;
+}
+
+.section-desc {
+  font-size: 0.98rem;
+  color: var(--text-muted);
+  max-width: 600px;
+  margin-bottom: 48px;
+  line-height: 1.85;
+}
+
+/* ── Architecture ── */
+
+.arch-visual {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.arch-visual:hover {
+  border-color: var(--border-hover);
+  box-shadow: 0 8px 48px rgba(0, 0, 0, 0.4);
+}
+
+.arch-visual img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.arch-visual-caption {
+  padding: 18px 24px;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  border-top: 1px solid var(--border);
+  letter-spacing: 0.01em;
+}
+
+/* ── Cards Grid ── */
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px;
+}
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 32px 28px;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(12px);
+  position: relative;
+  overflow: hidden;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.card:hover {
+  border-color: var(--border-hover);
+  background: var(--bg-card-hover);
+  box-shadow: 0 4px 36px rgba(0, 0, 0, 0.35), 0 0 20px var(--accent-glow);
+  transform: translateY(-3px);
+}
+
+.card:hover::before {
+  opacity: 1;
+}
+
+.card-label {
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-light);
+  margin-bottom: 14px;
+}
+
+.card-title {
+  font-size: 1.12rem;
+  font-weight: 600;
+  color: var(--white);
+  margin-bottom: 12px;
+}
+
+.card-text {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  line-height: 1.75;
+}
+
+/* ── Research Cards ── */
+
+.research-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.research-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 28px 22px;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  display: block;
+  backdrop-filter: blur(12px);
+  position: relative;
+  overflow: hidden;
+}
+
+.research-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.research-card:hover {
+  border-color: var(--border-hover);
+  background: var(--bg-card-hover);
+  box-shadow: 0 4px 36px rgba(0, 0, 0, 0.35), 0 0 20px var(--accent-glow);
+  transform: translateY(-3px);
+}
+
+.research-card:hover::before {
+  opacity: 1;
+}
+
+.research-accent {
+  width: 28px;
+  height: 2px;
+  background: var(--accent);
+  margin-bottom: 18px;
+  border-radius: 1px;
+}
+
+.research-card .card-title {
+  font-size: 0.95rem;
+  margin-bottom: 10px;
+}
+
+.research-card .card-text {
+  font-size: 0.82rem;
+  line-height: 1.7;
+}
+
+/* ── Divider ── */
+
+.divider {
+  height: 1px;
+  background: var(--border);
+  border: none;
+  margin: 0;
+}
+
+/* ── Footer ── */
+
+footer {
+  padding: 64px 0 48px;
+  text-align: center;
+  border-top: 1px solid var(--border);
+}
+
+.footer-brand {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+
+.footer-domain {
+  font-family: var(--mono);
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+
+.footer-tagline {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  margin-bottom: 24px;
+}
+
+.footer-link {
+  font-family: var(--mono);
+  font-size: 0.76rem;
+  color: var(--text-dim);
+  text-decoration: none;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.footer-link:hover {
+  color: var(--text-muted);
+  border-color: var(--border-hover);
+}
+
+@keyframes logoGlow {
+  0%,100% {
+    filter:
+      drop-shadow(0 0 18px rgba(80,150,255,0.35))
+      drop-shadow(0 0 30px rgba(60,112,180,0.20))
+      drop-shadow(0 0 70px rgba(60,112,180,0.10));
+  }
+
+  50% {
+    filter:
+      drop-shadow(0 0 25px rgba(80,150,255,0.45))
+      drop-shadow(0 0 45px rgba(60,112,180,0.30))
+      drop-shadow(0 0 90px rgba(60,112,180,0.15));
+  }
+}
+
+/* ── Hero Tagline ── */
+
+.hero-tagline {
+  font-size: 1.15rem;
+  font-weight: 500;
+  color: var(--accent-light);
+  letter-spacing: 0.08em;
+  margin-bottom: 4px;
+}
+
+/* ── Hero Explain ── */
+
+.hero-explain {
+  font-size: 0.92rem;
+  color: var(--text);
+  letter-spacing: 0.02em;
+  margin-bottom: 20px;
+  max-width: 560px;
+}
+
+/* ── Live Panel ── */
+
+.live-panel {
+  background: rgba(8, 12, 20, 0.5);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 24px 18px;
+  margin: 0 auto 32px;
+  max-width: 580px;
+  width: 100%;
+}
+
+.live-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #3da86f;
+  box-shadow: 0 0 6px rgba(61,168,111,0.5);
+  animation: livePulse 2s ease-in-out infinite;
+}
+
+@keyframes livePulse { 0%,100%{opacity:1;} 50%{opacity:0.5;} }
+
+.live-panel .tele-strip {
+  margin: 0;
+  max-width: none;
+}
+
+/* ── Why Strip ── */
+
+.why-strip {
+  padding: 48px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background: rgba(8, 12, 20, 0.4);
+}
+
+.why-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 28px;
+}
+
+.why-title {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--white);
+  margin-bottom: 10px;
+}
+
+.why-text {
+  font-size: 0.84rem;
+  color: var(--text-muted);
+  line-height: 1.7;
+}
+
+/* ── Independent Block ── */
+
+.indie-block {
+  background: var(--bg-surface);
+  border-left: 3px solid var(--accent);
+  padding: 36px 36px;
+  border-radius: 0 8px 8px 0;
+  margin-top: 32px;
+}
+
+.indie-block p {
+  font-size: 0.95rem;
+  color: var(--text);
+  line-height: 1.85;
+  margin-bottom: 16px;
+  max-width: 640px;
+}
+
+.indie-block p:last-child { margin-bottom: 0; }
+.indie-block p.muted { color: var(--text-muted); }
+.indie-block a { color: var(--accent-light); text-decoration: none; border-bottom: 1px solid var(--border-accent); }
+.indie-block a:hover { border-color: var(--accent-light); }
+
+/* ── Support Grid ── */
+
+.support-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin-top: 32px;
+}
+
+.pool-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 22px 22px;
+  transition: border-color 0.3s;
+}
+
+.pool-card:hover { border-color: var(--border-hover); }
+
+.pool-card-label {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent-light);
+  margin-bottom: 8px;
+}
+
+.pool-card-value {
+  font-family: var(--mono);
+  font-size: 0.88rem;
+  color: var(--white);
+  line-height: 1.5;
+}
+
+.pool-card-value.sm {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  word-break: break-all;
+}
+
+/* ── Infrastructure Status ── */
+
+.infra-status-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.infra-status-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  border-bottom: 1px solid rgba(80,120,180,0.06);
+}
+
+.infra-status-item:nth-last-child(-n+2) {
+  border-bottom: none;
+}
+
+.infra-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.infra-status-dot.active {
+  background: #3da86f;
+  box-shadow: 0 0 6px rgba(61,168,111,0.4);
+}
+
+.infra-status-dot.dev {
+  background: #a89b3d;
+  box-shadow: 0 0 6px rgba(168,155,61,0.4);
+}
+
+.infra-status-key {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  min-width: 110px;
+}
+
+.infra-status-val {
+  font-size: 0.84rem;
+  color: var(--text);
+}
+
+.infra-status-val a {
+  color: var(--accent-light);
+  text-decoration: none;
+  border-bottom: 1px solid var(--border-accent);
+}
+
+.infra-status-val a:hover {
+  border-color: var(--accent-light);
+}
+
+/* ── Footer Motto ── */
+
+.footer-motto {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-bottom: 16px;
+}
+
+/* ── Responsive ── */
+
+@media (max-width: 768px) {
+  .hero-logo { width: 380px; }
+  .hero-title { font-size: 3rem; letter-spacing: 0.14em; }
+  .hero-subtitle { font-size: 0.9rem; }
+  .hero-motto { font-size: 1.2rem; }
+  .hero { padding: 100px 0 60px; }
+  section { padding: 64px 0; }
+  .card-grid { grid-template-columns: 1fr; }
+  .research-grid { grid-template-columns: repeat(2, 1fr); }
+  .support-grid { grid-template-columns: 1fr; }
+  .indie-block { padding: 28px 24px; }
+  .hero-tagline { font-size: 1rem; }
+  .infra-status-grid { grid-template-columns: 1fr; }
+  .ub { padding: 0 16px; }
+  .ub-nav { gap: 2px; }
+  .ub-nav a { padding: 5px 8px; font-size: 0.7rem; }
+  .status-inner { gap: 8px; }
+  .status-badge { font-size: 0.64rem; padding: 5px 12px; }
+  .tele-strip { gap: 8px; }
+  .tele-pill { padding: 5px 10px; font-size: 0.62rem; }
+  .why-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .live-panel { padding: 14px 18px; max-width: 460px; }
+}
+
+@media (max-width: 480px) {
+  .hero-logo { width: 260px; }
+  .hero-title { font-size: 2.4rem; letter-spacing: 0.10em; }
+  .hero-motto { font-size: 1.05rem; }
+  .hero-actions { flex-direction: column; align-items: center; }
+  .btn { text-align: center; width: 100%; max-width: 280px; }
+  .research-grid { grid-template-columns: 1fr; }
+  .ub-brand { font-size: 0.75rem; }
+  .tele-strip { gap: 6px; }
+  .tele-pill { padding: 4px 8px; font-size: 0.58rem; }
+  .tele-label { font-size: 0.55rem; }
+  .why-grid { grid-template-columns: 1fr; gap: 20px; }
+  .live-panel { max-width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<canvas id="grid-bg"></canvas>
+
+<div class="page-wrap">
+
+  <!-- Nav (shared) -->
+  <div id="nav-container"></div>
+  <script src="/assets/nav.js"></script>
+
+  <div class="container">
+
+    <!-- Hero -->
+    <section class="hero">
+      <img src="/assets/tsunagi-logo-white.png" alt="TSUNAGI" class="hero-logo">
+      <p class="hero-tagline">Independent Cardano Infrastructure</p>
+      <p class="hero-subtitle">A Zig-native Cardano node with integrated verifiable trust.</p>
+      <p class="hero-motto">Let It Run. Let It Resolve.</p>
+      <p class="hero-explain">
+        Follows the chain via Ouroboros ChainSync and BlockFetch. Admits transactions through a six-gate hardened mempool. Serves and ingests transactions via bidirectional TxSubmission2. Computes a signed eight-layer trust graph from runtime observations. Deterministic. Verifiable. No garbage collector. No runtime allocator.
+      </p>
+      <div class="live-panel">
+        <div class="live-panel-header"><span class="live-dot"></span><span>Live Node</span></div>
+        <div class="tele-strip" id="tele-strip">
+          <div class="tele-pill"><span class="tele-label">Network</span> <span class="tele-val" id="t-net">Loading&hellip;</span></div>
+          <div class="tele-pill"><span class="tele-label">Role</span> <span class="tele-val">Follower + Forge</span></div>
+          <div class="tele-pill"><span class="tele-label">Language</span> <span class="tele-val">Zig</span></div>
+          <div class="tele-pill"><span class="tele-label">Slot</span> <span class="tele-val" id="t-slot">Loading&hellip;</span></div>
+          <div class="tele-pill"><span class="tele-label">Block</span> <span class="tele-val" id="t-block">Loading&hellip;</span></div>
+          <div class="tele-pill"><span class="tele-label">Tip Age</span> <span class="tele-val" id="t-age">Loading&hellip;</span></div>
+          <div class="tele-pill"><span class="tele-label">Status</span> <span class="tele-val" id="t-status">Loading&hellip;</span></div>
+          <div class="tele-pill"><span class="tele-label">Delta</span> <span class="tele-val" id="t-delta">Loading&hellip;</span></div>
+        </div>
+        <div style="text-align:center;margin-top:8px;font-family:var(--mono);font-size:0.58rem;color:var(--text-dim);letter-spacing:0.04em;" id="t-updated">Connecting&hellip;</div>
+      </div>
+      <div class="hero-divider" aria-hidden="true"></div>
+<div class="hero-actions">
+  <!-- Primary (what you WANT people to click) -->
+  <a href="/dashboard/" class="btn btn-primary">Live Dashboard</a>
+  <a href="/project/" class="btn btn-primary">Project</a>
+
+  <!-- Secondary (exploration) -->
+  <a href="/operator/" class="btn btn-outline">Operator</a>
+  <a href="/explorer/" class="btn btn-outline">Explorer</a>
+  <a href="/status/" class="btn btn-outline">Status</a>
+
+  <!-- Tertiary (reference) -->
+  <a href="/whitepaper" class="btn btn-outline">Whitepaper</a>
+  <a href="/architecture/" class="btn btn-outline">Architecture</a>
+
+  <!-- Source -->
+  <a href="/project/" class="btn btn-outline" title="Source private during active development">Source</a>
+</div>
+    </section>
+
+  </div>
+
+  <!-- What is TSUNAGI -->
+  <div style="max-width:800px;margin:0 auto;padding:24px 28px 0;text-align:center;">
+    <p style="font-size:0.92rem;color:var(--text-m);line-height:1.7;">
+      TSUNAGI is a complete Cardano node built from scratch in Zig &mdash; no Haskell dependency, no IOG codebase fork.
+      It follows the live chain, decodes blocks, tracks UTxO state, and has proven ChainSync interoperability with real cardano-node relays.
+      <a href="/project/" style="color:var(--accent-l);text-decoration:none;border-bottom:1px solid rgba(90,142,200,0.3);">Learn more &rarr;</a>
+    </p>
+  </div>
+
+  <!-- Why Different -->
+  <div style="max-width:900px;margin:0 auto;padding:28px 28px 0;">
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;">
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:18px 20px;text-align:center;">
+        <div style="font-family:var(--mono);font-size:0.56rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent-l);margin-bottom:6px;">Deterministic</div>
+        <div style="font-size:0.84rem;color:var(--text-m);line-height:1.5;">Same inputs, same outputs. No hidden state. No ambient configuration.</div>
+      </div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:18px 20px;text-align:center;">
+        <div style="font-family:var(--mono);font-size:0.56rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent-l);margin-bottom:6px;">Observable</div>
+        <div style="font-size:0.84rem;color:var(--text-m);line-height:1.5;">Every subsystem explains itself. Health, sync, UTxO, mempool &mdash; all visible.</div>
+      </div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:18px 20px;text-align:center;">
+        <div style="font-family:var(--mono);font-size:0.56rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent-l);margin-bottom:6px;">Operator-First</div>
+        <div style="font-size:0.84rem;color:var(--text-m);line-height:1.5;">Built for operators who value clarity, control, and correctness.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Product links -->
+  <div style="max-width:900px;margin:0 auto;padding:20px 28px 0;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+    <a href="/dashboard/" style="font-size:0.8rem;font-weight:600;padding:8px 20px;border-radius:6px;text-decoration:none;color:var(--accent-l);border:1px solid var(--border-accent);background:transparent;transition:all 0.2s;">Live Dashboard</a>
+    <a href="/project/" style="font-size:0.8rem;font-weight:600;padding:8px 20px;border-radius:6px;text-decoration:none;color:var(--accent-l);border:1px solid var(--border-accent);background:transparent;transition:all 0.2s;">Project</a>
+    <a href="/guardian/" style="font-size:0.8rem;font-weight:600;padding:8px 20px;border-radius:6px;text-decoration:none;color:var(--accent-l);border:1px solid var(--border-accent);background:transparent;transition:all 0.2s;">Guardian</a>
+  </div>
+
+  <!-- Why TSUNAGI -->
+  <div class="why-strip">
+    <div class="container">
+      <div class="why-grid">
+        <div class="why-item">
+          <div class="why-title">Implementation Diversity</div>
+          <div class="why-text">An independent codebase strengthens the network by providing a second perspective on protocol verification.</div>
+        </div>
+        <div class="why-item">
+          <div class="why-title">Operator-First Observability</div>
+          <div class="why-text">Every subsystem explains itself. The node makes its internal state legible to the people who run it.</div>
+        </div>
+        <div class="why-item">
+          <div class="why-title">Deterministic Infrastructure</div>
+          <div class="why-text">Identical inputs produce identical outputs, unconditionally. No hidden state. No ambient configuration.</div>
+        </div>
+        <div class="why-item">
+          <div class="why-title">Independent Engineering</div>
+          <div class="why-text">Built from first principles without institutional funding. Priorities follow engineering judgment, not grant cycles.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+
+    <!-- Independent Engineering -->
+    <section id="independent">
+      <div class="section-label">Independent Development</div>
+      <h2 class="section-title">Independent Engineering</h2>
+      <p class="section-desc">
+        Real infrastructure work, transparent progress, no institutional dependencies.
+      </p>
+      <div class="indie-block">
+        <p>
+          TSUNAGI is an independent implementation effort &mdash; a deterministic Cardano node
+          architecture written in Zig from scratch. The project began as a solo engineering
+          effort to build node infrastructure grounded in observability, runtime clarity, and
+          operator-first design principles.
+        </p>
+        <p>
+          The deterministic ledger pipeline, shadow verification system, LMDB persistence layer,
+          four observability subsystems (KAGAMI, YAMORI, TATE, KURA), and continuous
+          preview-network validation have all been built through sustained daily engineering
+          &mdash; without institutional grants, governance funding, or venture capital.
+        </p>
+        <p>
+          The treasury model and support path are publicly documented.
+          Support through the <a href="/treasury/">TSUNA stake pool</a> helps sustain
+          ongoing development and infrastructure costs.
+        </p>
+      </div>
+    </section>
+
+    <hr class="divider">
+
+    <!-- Infrastructure Status -->
+    <section id="infra-status">
+      <div class="section-label">Current State</div>
+      <h2 class="section-title">Infrastructure Status</h2>
+      <p class="section-desc">
+        TSUNAGI is running infrastructure, verified against a live network.
+      </p>
+      <div class="infra-status-grid">
+        <div class="infra-status-item"><span class="infra-status-dot active"></span><span class="infra-status-key">Node</span><span class="infra-status-val">TSUNAGI preview follower</span></div>
+        <div class="infra-status-item"><span class="infra-status-dot active"></span><span class="infra-status-key">Network</span><span class="infra-status-val">Cardano preview</span></div>
+        <div class="infra-status-item"><span class="infra-status-dot active"></span><span class="infra-status-key">Telemetry</span><span class="infra-status-val">Public &mdash; <a href="/data/status.json">/data/status.json</a></span></div>
+        <div class="infra-status-item"><span class="infra-status-dot active"></span><span class="infra-status-key">Explorer</span><span class="infra-status-val"><a href="/explorer/">Live</a></span></div>
+        <div class="infra-status-item"><span class="infra-status-dot active"></span><span class="infra-status-key">Decode</span><span class="infra-status-val"><a href="/decode/">Live</a></span></div>
+        <div class="infra-status-item"><span class="infra-status-dot active"></span><span class="infra-status-key">Operator</span><span class="infra-status-val"><a href="/operator/">Active</a></span></div>
+        <div class="infra-status-item"><span class="infra-status-dot dev"></span><span class="infra-status-key">Maturity</span><span class="infra-status-val">Active development</span></div>
+        <div class="infra-status-item"><span class="infra-status-dot dev"></span><span class="infra-status-key">Source</span><span class="infra-status-val">Private during active development &mdash; public release planned after stability milestone</span></div>
+      </div>
+    </section>
+
+    <hr class="divider">
+
+    <!-- Latest Milestone -->
+    <section id="latest-milestone">
+      <div class="section-label">Latest Milestone</div>
+      <h2 class="section-title">Propagation Artifact Coherence</h2>
+      <p class="section-desc" style="max-width:700px;">
+        Merged on main: <span style="font-family:var(--mono);font-size:0.82rem;color:var(--accent-light);">#68</span> &mdash;
+        Forge promotion now publishes a coherent sealed artifact with verified fragment ancestry.
+        The propagation server rejects incoherent fragment state rather than serving stale ancestry to a relay.
+      </p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px;max-width:740px;margin-left:auto;margin-right:auto;">
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:16px 20px;">
+          <div style="font-family:var(--mono);font-size:0.56rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent-light);margin-bottom:8px;">What Changed</div>
+          <ul style="font-size:0.82rem;color:var(--text-muted);line-height:1.7;padding-left:16px;margin:0;">
+            <li>Sealed promotion publishes coherent fragment ancestry</li>
+            <li>Propagation server validates ancestry at serve time</li>
+            <li>Stale fragment state is rejected, not served</li>
+            <li>Structured truth logs added at publish and serve time</li>
+            <li>Regression tests pass, ReleaseSafe build passes</li>
+          </ul>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:16px 20px;">
+          <div style="font-family:var(--mono);font-size:0.56rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent-light);margin-bottom:8px;">Why It Mattered</div>
+          <ul style="font-size:0.82rem;color:var(--text-muted);line-height:1.7;padding-left:16px;margin:0;">
+            <li>Relay disconnects traced to stale fragment / sealed mismatch</li>
+            <li>Promoted sealed tip&rsquo;s parent was missing from fragment window</li>
+            <li>Relay saw TSUNAGI as stale at connection time (<span style="font-family:var(--mono);font-size:0.78rem;">relay_ahead=true</span>)</li>
+            <li>Connection dropped after MsgIntersectFound, before MsgRequestNext</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <hr class="divider">
+
+    <!-- Current Live Target -->
+    <section id="live-target">
+      <div class="section-label">Active Investigation</div>
+      <h2 class="section-title">Current Live Target</h2>
+      <p class="section-desc" style="max-width:680px;">
+        Observing the relay-facing path on preview under live conditions.
+        Artifact coherence was necessary but not sufficient &mdash; relay timing still matters.
+      </p>
+      <div style="max-width:500px;margin:18px auto 0;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:18px 24px;">
+        <div style="font-family:var(--mono);font-size:0.56rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent-light);margin-bottom:12px;">Required Runtime Sequence</div>
+        <div style="font-family:var(--mono);font-size:0.78rem;line-height:2.0;">
+          <div style="color:var(--text-dim);">1. <span style="color:var(--text-muted);">CHAIN_POSITION &hellip; relay_ahead=false</span></div>
+          <div style="color:var(--text-dim);">2. <span style="color:var(--text-muted);">MsgRequestNext</span></div>
+          <div style="color:var(--text-dim);">3. <span style="color:var(--text-muted);">MsgRollBackward</span></div>
+          <div style="color:var(--text-dim);">4. <span style="color:var(--text-muted);">MsgRollForward</span></div>
+          <div style="color:var(--text-dim);">5. <span style="color:var(--text-muted);">BlockFetch</span></div>
+        </div>
+      </div>
+    </section>
+
+    <hr class="divider">
+
+    <!-- What Is Proven -->
+    <section id="proven">
+      <div class="section-label">Verification Status</div>
+      <h2 class="section-title">What Is Proven</h2>
+      <p class="section-desc">Observable, verifiable capabilities &mdash; not claims.</p>
+      <div class="infra-status-grid">
+        <div class="infra-status-item"><span class="infra-status-dot active"></span><span class="infra-status-key">ChainSync</span><span class="infra-status-val">Follows live preview chain via Ouroboros</span></div>
+        <div class="infra-status-item"><span class="infra-status-dot active"></span><span class="infra-status-key">BlockFetch</span><span class="infra-status-val">Full block bodies decoded from CBOR</span></div>
+        <div class="infra-status-item"><span class="infra-status-dot active"></span><span class="infra-status-key">UTxO + LMDB</span><span class="infra-status-val">Ancestry-verified persistent ledger state</span></div>
+        <div class="infra-status-item"><span class="infra-status-dot active"></span><span class="infra-status-key">Mempool</span><span class="infra-status-val">Six-gate admission with confirmed eviction</span></div>
+        <div class="infra-status-item"><span class="infra-status-dot active"></span><span class="infra-status-key">TxSubmission2</span><span class="infra-status-val">Bidirectional: serve inventory + ingest from peers</span></div>
+        <div class="infra-status-item"><span class="infra-status-dot active"></span><span class="infra-status-key">Trust Stack</span><span class="infra-status-val">Eight signed layers, all verifiable</span></div>
+        <div class="infra-status-item"><span class="infra-status-dot active"></span><span class="infra-status-key">Propagation</span><span class="infra-status-val">Coherent artifact publish + serve-time ancestry validation</span></div>
+        <div class="infra-status-item"><span class="infra-status-dot active"></span><span class="infra-status-key">Operator Core</span><span class="infra-status-val">Health 0&ndash;100, runtime state, guardian mode</span></div>
+        <div class="infra-status-item"><span class="infra-status-dot active"></span><span class="infra-status-key">Validation</span><span class="infra-status-val">Input uniqueness, balance, validity, address</span></div>
+        <div class="infra-status-item"><span class="infra-status-dot active"></span><span class="infra-status-key">Block Forge</span><span class="infra-status-val">VRF + KES, deferred slot-time, proven on preview</span></div>
+        <div class="infra-status-item"><span class="infra-status-dot active"></span><span class="infra-status-key">Artifact Coherence</span><span class="infra-status-val">Sealed + fragment published coherently at forge time</span></div>
+      </div>
+      <div style="margin-top:16px;">
+        <div class="section-label" style="margin-bottom:10px;">Not Yet Proven</div>
+        <div class="infra-status-grid">
+          <div class="infra-status-item"><span class="infra-status-dot dev"></span><span class="infra-status-key">Accepted Block</span><span class="infra-status-val">No network-accepted forged block yet</span></div>
+          <div class="infra-status-item"><span class="infra-status-dot dev"></span><span class="infra-status-key">Consensus Parity</span><span class="infra-status-val">Not equivalent to cardano-node</span></div>
+          <div class="infra-status-item"><span class="infra-status-dot dev"></span><span class="infra-status-key">Plutus / Scripts</span><span class="infra-status-val">No script execution yet</span></div>
+          <div class="infra-status-item"><span class="infra-status-dot dev"></span><span class="infra-status-key">Protocol Params</span><span class="infra-status-val">No min-fee / min-UTxO enforcement yet</span></div>
+          <div class="infra-status-item"><span class="infra-status-dot dev"></span><span class="infra-status-key">Epoch Transitions</span><span class="infra-status-val">No stake snapshots / rewards yet</span></div>
+          <div class="infra-status-item"><span class="infra-status-dot dev"></span><span class="infra-status-key">Production BP</span><span class="infra-status-val">Not production-ready block producer</span></div>
+        </div>
+      </div>
+    </section>
+
+    <hr class="divider">
+
+    <!-- Architecture -->
+    <section id="architecture">
+      <div class="section-label">System Design</div>
+      <h2 class="section-title">Architecture</h2>
+      <p class="section-desc">
+        TSUNAGI is organized as a layered architecture where each subsystem addresses a specific
+        operational concern. The observability stack (KAGAMI, YAMORI, TATE, KURA) monitors and
+        stabilizes the node. The TSURUGI protocol engine manages Ouroboros communication. The
+        deterministic ledger pipeline processes blocks through a modular state machine. LMDB
+        provides persistent storage with transactional guarantees.
+      </p>
+      <div class="arch-visual">
+        <div class="arch-visual-caption">
+          TSUNAGI layered node architecture: observability subsystems,
+          protocol engine, deterministic ledger pipeline, and LMDB persistent storage.
+        </div>
+      </div>
+    </section>
+
+    <hr class="divider">
+
+    <!-- Pillars -->
+    <section id="pillars">
+      <div class="section-label">Foundation</div>
+      <h2 class="section-title">Core Pillars</h2>
+      <p class="section-desc">
+        Four foundational capabilities define the TSUNAGI architecture.
+      </p>
+      <div class="card-grid">
+        <div class="card">
+          <div class="card-label">Ledger Engine</div>
+          <h3 class="card-title">Deterministic Ledger</h3>
+          <p class="card-text">
+            A modular pipeline separating delta extraction, state application, undo management,
+            and persistent storage into independently testable components. No global state.
+            Identical inputs produce identical outputs on every execution.
+          </p>
+        </div>
+        <div class="card">
+          <div class="card-label">Verification</div>
+          <h3 class="card-title">Shadow Verification</h3>
+          <p class="card-text">
+            An independent pipeline instance processes identical deltas on every block and
+            compares parity with the primary ledger. Divergence is detected within one block
+            of occurrence. The shadow never influences the primary path.
+          </p>
+        </div>
+        <div class="card">
+          <div class="card-label">Persistence</div>
+          <h3 class="card-title">LMDB Truth Mode</h3>
+          <p class="card-text">
+            Three-stage persistence with preflight coverage scan, atomic LMDB writes, and
+            automatic memory fallback. Shadow-writes progressively converge the store with
+            live chain state. Operators select the persistence guarantee they require.
+          </p>
+        </div>
+        <div class="card">
+          <div class="card-label">Operations</div>
+          <h3 class="card-title">Self-Healing Infrastructure</h3>
+          <p class="card-text">
+            Four observability subsystems &mdash; KAGAMI, YAMORI, TATE, KURA &mdash; evaluate
+            health, verify integrity, and stabilize artifacts automatically. The node explains
+            its own health rather than requiring external diagnostic inference.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <hr class="divider">
+
+    <!-- Infrastructure -->
+    <section id="infrastructure">
+      <div class="section-label">Infrastructure</div>
+      <h2 class="section-title">Live Infrastructure</h2>
+      <p class="section-desc">
+        Operational telemetry, decode pipelines, and observability tooling for the TSUNAGI runtime.
+      </p>
+      <div class="research-grid">
+        <a href="/status/" class="research-card">
+          <div class="research-accent"></div>
+          <h3 class="card-title">Status</h3>
+          <p class="card-text">Real-time node health dashboard with 20 telemetry fields from the running preview node.</p>
+        </a>
+        <a href="/explorer/" class="research-card">
+          <div class="research-accent"></div>
+          <h3 class="card-title">Explorer</h3>
+          <p class="card-text">Block decode activity viewer with ledger telemetry and decoded event timeline.</p>
+        </a>
+        <a href="/decode/" class="research-card">
+          <div class="research-accent"></div>
+          <h3 class="card-title">Decode</h3>
+          <p class="card-text">Deterministic decode pipeline visualization showing the block-to-ledger flow.</p>
+        </a>
+        <a href="/operator/" class="research-card">
+          <div class="research-accent"></div>
+          <h3 class="card-title">Operator Guide</h3>
+          <p class="card-text">Running, monitoring, and maintaining a TSUNAGI node. Operational workflows and readiness status.</p>
+        </a>
+        <a href="/network/" class="research-card">
+          <div class="research-accent"></div>
+          <h3 class="card-title">Network</h3>
+          <p class="card-text">Peer connectivity, protocol negotiation, and relay communication diagnostics.</p>
+        </a>
+        <a href="/labs/" class="research-card">
+          <div class="research-accent"></div>
+          <h3 class="card-title">Labs</h3>
+          <p class="card-text">Experimental tooling, protocol experiments, and research utilities.</p>
+        </a>
+      </div>
+    </section>
+
+    <hr class="divider">
+
+    <!-- Research -->
+    <section id="research">
+      <div class="section-label">Documentation</div>
+      <h2 class="section-title">Research &amp; Documentation</h2>
+      <p class="section-desc">
+        The architecture, methodology, and vision behind TSUNAGI are documented
+        across four primary documents.
+      </p>
+      <div class="research-grid">
+        <a href="/whitepaper" class="research-card">
+          <div class="research-accent"></div>
+          <h3 class="card-title">Whitepaper</h3>
+          <p class="card-text">Complete architecture, verification methodology, security model, and experimental validation.</p>
+        </a>
+        <a href="/manifesto" class="research-card">
+          <div class="research-accent"></div>
+          <h3 class="card-title">Manifesto</h3>
+          <p class="card-text">Engineering philosophy, design principles, and the vision for deterministic infrastructure.</p>
+        </a>
+        <a href="/roadmap" class="research-card">
+          <div class="research-accent"></div>
+          <h3 class="card-title">Roadmap</h3>
+          <p class="card-text">Development phases from deterministic foundation through ecosystem contribution.</p>
+        </a>
+        <a href="/vision/" class="research-card">
+          <div class="research-accent"></div>
+          <h3 class="card-title">Vision</h3>
+          <p class="card-text">Long-term vision for independent infrastructure and the MUSUBI research direction.</p>
+        </a>
+      </div>
+    </section>
+
+    <hr class="divider">
+
+    <!-- Support TSUNAGI -->
+    <section id="support">
+      <div class="section-label">Support</div>
+      <h2 class="section-title">Support TSUNAGI</h2>
+      <p class="section-desc">
+        TSUNAGI is developed independently without institutional funding. Support through TSUNA or the $tsunagi ADA handle helps sustain ongoing development and infrastructure costs.
+      </p>
+      <div class="support-grid">
+        <div class="pool-card">
+          <div class="pool-card-label">Pool Name</div>
+          <div class="pool-card-value">TSUNAGI Infrastructure</div>
+        </div>
+        <div class="pool-card">
+          <div class="pool-card-label">Ticker</div>
+          <div class="pool-card-value">TSUNA</div>
+        </div>
+        <div class="pool-card">
+          <div class="pool-card-label">ADA Handle</div>
+          <div class="pool-card-value">$tsunagi</div>
+        </div>
+        <div class="pool-card">
+          <div class="pool-card-label">Pool ID</div>
+          <div class="pool-card-value sm">pool1hnmcevsa69k88nh4d6ud5qyykwmgzrg6crju79zsv2uu65mkgr8</div>
+        </div>
+      </div>
+      <div class="indie-block" style="margin-top:32px;">
+        <p class="muted">
+          Funding model and transparency principles are documented
+          on the <a href="/treasury/">Treasury</a> page.
+        </p>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Development State Disclosure -->
+  <div style="max-width:640px;margin:0 auto;padding:32px 28px;text-align:center;">
+    <div style="border:1px solid var(--border);border-radius:8px;padding:20px 24px;background:var(--bg-card);">
+      <div style="font-family:var(--mono);font-size:0.7rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent-l);margin-bottom:8px;">Development Status</div>
+      <p style="font-size:0.88rem;color:var(--text-m);line-height:1.6;margin:0;">
+        TSUNAGI is under active development. Running live on the Cardano preview network.
+        Latest merged milestone: propagation artifact coherence (#68).
+        Current live target: relay progression past MsgIntersectFound under relay_ahead=false conditions.
+        Not a mainnet replacement at this stage.
+      </p>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <p class="footer-motto">Let It Run. Let It Resolve.</p>
+      <div class="footer-brand">TSUNAGI</div>
+      <div class="footer-domain">tsunagi.tech</div>
+      <p class="footer-tagline">Independent Cardano infrastructure &middot; MIT OR Apache-2.0</p>
+      <a href="/treasury" class="footer-link">Treasury</a>
+    </div>
+  </footer>
+
+</div>
+
+<script>
+(function() {
+  var canvas = document.getElementById('grid-bg');
+  var ctx = canvas.getContext('2d');
+  var dpr = window.devicePixelRatio || 1;
+  var w, h, time = 0;
+  var spacing = 48;
+
+  // Sparse pulse nodes — pick random intersections to pulse
+  var pulseNodes = [];
+  var pulseInterval = 3000; // spawn new pulse every ~3s
+  var lastPulseSpawn = 0;
+
+  function resize() {
+    w = window.innerWidth;
+    h = document.documentElement.scrollHeight;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function draw() {
+    time += 0.002;
+    var now = Date.now();
+    ctx.clearRect(0, 0, w, h);
+
+    var cols = Math.ceil(w / spacing) + 1;
+    var rows = Math.ceil(h / spacing) + 1;
+    var scrollY = window.scrollY || 0;
+    var viewH = window.innerHeight;
+
+    // Global 10s breathing cycle (0.65 .. 1.0 multiplier)
+    var breathe = 0.825 + 0.175 * Math.sin(time * 0.628);
+
+    // Vertical lines with breathing
+    for (var i = 0; i < cols; i++) {
+      var x = i * spacing;
+      var wave = Math.sin(i * 0.25 + time * 0.7) * 0.5 + 0.5;
+      var a = (0.03 + wave * 0.035) * breathe;
+      if (a > 0.10) a = 0.10;
+      ctx.strokeStyle = 'rgba(50, 90, 150, ' + a + ')';
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, h);
+      ctx.stroke();
+    }
+
+    // Horizontal lines with breathing
+    for (var j = 0; j < rows; j++) {
+      var y = j * spacing;
+      var wave = Math.sin(j * 0.2 + time * 0.5) * 0.5 + 0.5;
+      var a = (0.03 + wave * 0.035) * breathe;
+      if (a > 0.10) a = 0.10;
+      ctx.strokeStyle = 'rgba(50, 90, 150, ' + a + ')';
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(w, y);
+      ctx.stroke();
+    }
+
+    // Slow horizontal scan line (~45s full traverse)
+    var scanY = ((time * 40) % h);
+    var scanGrad = ctx.createLinearGradient(0, scanY - 60, 0, scanY + 60);
+    scanGrad.addColorStop(0, 'rgba(50, 90, 150, 0)');
+    scanGrad.addColorStop(0.5, 'rgba(50, 90, 150, 0.05)');
+    scanGrad.addColorStop(1, 'rgba(50, 90, 150, 0)');
+    ctx.fillStyle = scanGrad;
+    ctx.fillRect(0, scanY - 60, w, 120);
+
+    // Slow vertical scan line (~60s full traverse)
+    var scanX = ((time * 25) % w);
+    var vGrad = ctx.createLinearGradient(scanX - 50, 0, scanX + 50, 0);
+    vGrad.addColorStop(0, 'rgba(50, 90, 150, 0)');
+    vGrad.addColorStop(0.5, 'rgba(50, 90, 150, 0.04)');
+    vGrad.addColorStop(1, 'rgba(50, 90, 150, 0)');
+    ctx.fillStyle = vGrad;
+    ctx.fillRect(scanX - 50, 0, 100, h);
+
+    // Intersection nodes near viewport (ripple wave)
+    for (var i = 0; i < cols; i++) {
+      for (var j = 0; j < rows; j++) {
+        var x = i * spacing;
+        var y = j * spacing;
+        if (y < scrollY - spacing || y > scrollY + viewH + spacing) continue;
+        var dist = Math.sqrt(Math.pow(x - w * 0.5, 2) + Math.pow(y - scrollY - viewH * 0.35, 2));
+        var pulse = Math.sin(dist * 0.003 - time * 1.2) * 0.5 + 0.5;
+        var alpha = (0.03 + pulse * 0.05) * breathe;
+        if (alpha > 0.10) alpha = 0.10;
+        var r = 1 + pulse * 0.5;
+        ctx.fillStyle = 'rgba(60, 110, 180, ' + alpha + ')';
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // Sparse random node pulses — faint expanding rings at intersections
+    if (now - lastPulseSpawn > pulseInterval && cols > 0 && rows > 0) {
+      var visRowStart = Math.max(0, Math.floor(scrollY / spacing));
+      var visRowEnd = Math.min(rows - 1, Math.ceil((scrollY + viewH) / spacing));
+      if (visRowEnd > visRowStart) {
+        pulseNodes.push({
+          x: Math.floor(Math.random() * cols) * spacing,
+          y: (visRowStart + Math.floor(Math.random() * (visRowEnd - visRowStart))) * spacing,
+          born: now,
+          life: 2500 + Math.random() * 2000
+        });
+        lastPulseSpawn = now;
+      }
+    }
+    for (var p = pulseNodes.length - 1; p >= 0; p--) {
+      var n = pulseNodes[p];
+      var age = (now - n.born) / n.life;
+      if (age > 1) { pulseNodes.splice(p, 1); continue; }
+      var fade = Math.sin(age * Math.PI);
+      var pAlpha = fade * 0.08;
+      if (pAlpha > 0.10) pAlpha = 0.10;
+      var pR = 2 + age * 7;
+      ctx.strokeStyle = 'rgba(60, 110, 180, ' + pAlpha + ')';
+      ctx.lineWidth = 1.0;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, pR, 0, Math.PI * 2);
+      ctx.stroke();
+      // Inner dot
+      var dAlpha = fade * 0.09;
+      if (dAlpha > 0.10) dAlpha = 0.10;
+      ctx.fillStyle = 'rgba(60, 110, 180, ' + dAlpha + ')';
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    requestAnimationFrame(draw);
+  }
+
+  window.addEventListener('resize', resize);
+  window.addEventListener('scroll', function() {
+    var h2 = document.documentElement.scrollHeight;
+    if (Math.abs(h2 - h) > 100) resize();
+  });
+  resize();
+  draw();
+})();
+</script>
+
+<script>
+(function() {
+  function fmt(n) {
+    if (n == null) return '\u2014';
+    return Number(n).toLocaleString('en-US');
+  }
+  function statusClass(s) {
+    if (s === 'healthy') return 't-healthy';
+    if (s === 'warn' || s === 'warning') return 't-warn';
+    if (s === 'critical') return 't-critical';
+    return '';
+  }
+  function update(d) {
+    var strip = document.getElementById('tele-strip');
+    strip.classList.remove('t-unavailable');
+    document.getElementById('t-net').textContent = d.network || '\u2014';
+    document.getElementById('t-slot').textContent = fmt(d.slot);
+    document.getElementById('t-block').textContent = fmt(d.block);
+    var age = document.getElementById('t-age');
+    if (d.tip_age_seconds != null) {
+      age.textContent = d.tip_age_seconds + 's';
+      age.className = 'tele-val ' + (d.tip_age_seconds > 600 ? 't-critical' : d.tip_age_seconds > 120 ? 't-warn' : '');
+    } else { age.textContent = '\u2014'; age.className = 'tele-val'; }
+    var st = document.getElementById('t-status');
+    var status = d.status || 'unknown';
+    st.textContent = status.toUpperCase();
+    st.className = 'tele-val ' + statusClass(status);
+
+    var dEl = document.getElementById('t-delta');
+    if (d.last_delta && d.last_delta.delta != null) {
+      var dv = Number(d.last_delta.delta);
+      dEl.textContent = (dv >= 0 ? '+' : '') + fmt(dv);
+      dEl.className = 'tele-val ' + (dv > 0 ? 't-healthy' : dv < 0 ? 't-critical' : '');
+    } else if (d.utxo_delta != null) {
+      var dv = Number(d.utxo_delta);
+      dEl.textContent = (dv >= 0 ? '+' : '') + fmt(dv);
+      dEl.className = 'tele-val';
+    } else {
+      dEl.textContent = '\u2014';
+      dEl.className = 'tele-val';
+    }
+    var updEl = document.getElementById('t-updated');
+    if (updEl) updEl.textContent = 'Last updated: ' + new Date().toLocaleTimeString('en-US',{hour12:false}) + ' \u2014 refreshing every 10s';
+  }
+  function fail() {
+    document.getElementById('tele-strip').classList.add('t-unavailable');
+    document.getElementById('t-updated').textContent = 'Telemetry unavailable \u2014 retrying';
+    ['t-net','t-slot','t-block','t-age','t-status','t-delta'].forEach(function(id){
+      var el = document.getElementById(id);
+      if (el && (el.textContent === 'Loading\u2026' || el.textContent === '...')) el.textContent = 'Awaiting data';
+    });
+  }
+  function fetch() {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', '/data/status.json', true);
+    xhr.timeout = 6000;
+    xhr.onload = function() {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try { update(JSON.parse(xhr.responseText)); } catch(e) { fail(); }
+      } else { fail(); }
+    };
+    xhr.onerror = fail;
+    xhr.ontimeout = fail;
+    xhr.send();
+  }
+  fetch();
+  setInterval(fetch, 10000);
+})();
+</script>
+
+</body>
+</html>

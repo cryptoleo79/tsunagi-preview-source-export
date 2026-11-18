@@ -1,0 +1,11 @@
+# Tsunagi retention cleanup — prune old evidence bundles, captures, alignment results
+[Unit]
+Description=Tsunagi Retention Cleanup (all networks)
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/src/tsunagi-follower
+ExecStart=/usr/bin/python3 scripts/retention_cleanup.py --home %h/tsunagi-home-mainnet
+ExecStart=/usr/bin/python3 scripts/retention_cleanup.py --home %h/tsunagi-home-preview
+ExecStart=/usr/bin/python3 scripts/retention_cleanup.py --home %h/tsunagi-home-sancho
+ExecStart=/usr/bin/python3 scripts/retention_cleanup.py --home %h/tsunagi-home-preprod

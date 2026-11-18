@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TSUNAGI Node Status</title>
+<meta name="description" content="Live operational telemetry for the TSUNAGI deterministic Cardano node.">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #05080e;
+  --bg-surface: #0a0f1a;
+  --bg-card: rgba(12,18,30,0.65);
+  --border: rgba(80,120,180,0.10);
+  --border-hover: rgba(80,120,180,0.28);
+  --border-accent: rgba(80,140,220,0.35);
+  --text: #d0d6e2;
+  --text-m: #7a8598;
+  --text-d: #4c5668;
+  --accent: #3d6fa8;
+  --accent-l: #5a8ec8;
+  --accent-glow: rgba(60,112,180,0.12);
+  --white: #eceef3;
+  --green: #3da86f;
+  --green-bg: rgba(61,168,111,0.08);
+  --green-border: rgba(61,168,111,0.20);
+  --amber: #a89b3d;
+  --amber-bg: rgba(168,155,61,0.08);
+  --amber-border: rgba(168,155,61,0.20);
+  --red: #a83d3d;
+  --red-bg: rgba(168,61,61,0.08);
+  --red-border: rgba(168,61,61,0.20);
+  --mono: 'SF Mono','Cascadia Code','Fira Code','Consolas',monospace;
+  --sans: -apple-system,BlinkMacSystemFont,'Segoe UI','Inter',Helvetica,Arial,sans-serif;
+}
+html { scroll-behavior: smooth; }
+body { font-family: var(--sans); background: var(--bg); color: var(--text); line-height: 1.6; overflow-x: hidden; }
+
+/* ── Utility Bar ── */
+.ub { position:fixed; top:0; left:0; right:0; z-index:100; height:48px; display:flex; align-items:center; justify-content:space-between; padding:0 28px; background:rgba(5,8,14,0.92); backdrop-filter:blur(14px); border-bottom:1px solid var(--border); }
+.ub-l { display:flex; align-items:center; gap:20px; }
+.ub-brand { font-size:0.82rem; font-weight:700; letter-spacing:0.14em; color:var(--white); text-decoration:none; }
+.ub-nav { display:flex; gap:6px; flex-wrap:wrap; }
+.ub-nav a { font-size:0.75rem; font-weight:500; letter-spacing:0.03em; color:var(--text-m); text-decoration:none; padding:5px 12px; border-radius:4px; border:1px solid transparent; transition:all 0.2s; }
+.ub-nav a:hover { color:var(--white); border-color:var(--border-accent); background:rgba(60,112,180,0.08); }
+.lang-switch { display:flex; align-items:center; gap:6px; margin-left:12px; font-size:0.75rem; white-space:nowrap; }
+.lang-switch a { text-decoration:none; color:var(--text-m); transition:color 0.2s ease; }
+.lang-switch a:hover { color:var(--text); }
+.lang-cur { color:var(--accent-l) !important; font-weight:600; }
+.lang-div { opacity:0.4; }
+
+/* ── Page ── */
+.pg { max-width:960px; margin:0 auto; padding:80px 28px 60px; }
+
+/* ── Title Block ── */
+.tb { text-align:center; padding:48px 0 40px; margin-bottom:40px; }
+.tb h1 { font-size:2rem; font-weight:700; color:var(--white); letter-spacing:0.06em; margin-bottom:10px; }
+.tb .st { font-size:0.95rem; color:var(--text-m); margin-bottom:24px; }
+.tb-badges { display:flex; justify-content:center; gap:10px; flex-wrap:wrap; }
+.tb-badge { display:inline-flex; align-items:center; gap:7px; padding:6px 14px; font-family:var(--mono); font-size:0.7rem; font-weight:600; letter-spacing:0.05em; text-transform:uppercase; border-radius:4px; }
+.tb-badge-net { color:var(--accent-l); background:rgba(60,112,180,0.08); border:1px solid var(--border-accent); }
+.tb-badge-live { color:var(--green); background:var(--green-bg); border:1px solid var(--green-border); }
+.tb-badge-dot { width:7px; height:7px; border-radius:50%; background:var(--green); animation:pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.35;} }
+
+/* ── Health Banner ── */
+.health-banner { text-align:center; margin-bottom:36px; padding:20px 0; border-bottom:1px solid var(--border); }
+.health-label { font-family:var(--mono); font-size:0.68rem; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-d); margin-bottom:8px; }
+.health-value { font-family:var(--mono); font-size:1.6rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; }
+.health-healthy { color:var(--green); }
+.health-converging { color:var(--amber); }
+.health-warn { color:var(--amber); }
+.health-critical { color:var(--red); }
+.health-unknown { color:var(--text-d); }
+
+/* ── Group Labels ── */
+.group-label { font-family:var(--mono); font-size:0.62rem; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; color:var(--text-d); margin:32px 0 12px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+.group-label:first-of-type { margin-top:0; }
+
+/* ── Card Grid ── */
+.grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:8px; }
+
+.card { background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:22px 20px; backdrop-filter:blur(12px); transition:border-color 0.25s; position:relative; overflow:hidden; }
+.card:hover { border-color:var(--border-hover); }
+.card::after { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,var(--accent),transparent); opacity:0; transition:opacity 0.25s; }
+.card:hover::after { opacity:0.6; }
+
+.card-label { font-family:var(--mono); font-size:0.62rem; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-d); margin-bottom:10px; }
+.card-value { font-family:var(--mono); font-size:1.15rem; font-weight:600; color:var(--white); word-break:break-all; }
+.card-value.sm { font-size:0.92rem; }
+.card-value.hash { font-size:0.82rem; color:var(--text-m); letter-spacing:0.03em; }
+
+/* Wide cards span 2 columns */
+.card-wide { grid-column: span 2; }
+
+/* Status-colored values */
+.val-healthy { color:var(--green); }
+.val-warn { color:var(--amber); }
+.val-critical { color:var(--red); }
+.val-enabled { color:var(--green); }
+.val-disabled { color:var(--text-d); }
+.val-mode { color:var(--accent-l); }
+
+/* ── Refresh indicator ── */
+.refresh-bar { display:flex; align-items:center; justify-content:center; gap:10px; padding:16px 0; margin-bottom:8px; }
+.refresh-text { font-family:var(--mono); font-size:0.7rem; color:var(--text-d); letter-spacing:0.04em; }
+.refresh-dot { width:6px; height:6px; border-radius:50%; background:var(--accent); opacity:0.4; transition:opacity 0.3s; }
+.refresh-dot.active { opacity:1; animation:blink 0.6s ease-in-out; }
+@keyframes blink { 0%{opacity:1;} 50%{opacity:0.2;} 100%{opacity:1;} }
+
+/* ── Error state ── */
+.error-box { text-align:center; padding:48px 20px; background:var(--bg-card); border:1px solid var(--border); border-radius:8px; margin-bottom:36px; }
+.error-box .icon { font-size:1.4rem; color:var(--text-d); margin-bottom:12px; }
+.error-box .msg { font-family:var(--mono); font-size:0.85rem; color:var(--text-m); margin-bottom:6px; }
+.error-box .sub { font-size:0.78rem; color:var(--text-d); }
+
+/* ── Footer ── */
+.ft { text-align:center; padding:40px 0 32px; border-top:1px solid var(--border); margin-top:48px; }
+.ft p { font-size:0.78rem; color:var(--text-d); text-align:center; letter-spacing:0.03em; }
+.ft .fm { font-size:0.88rem; color:var(--text-m); font-weight:600; margin-bottom:8px; }
+
+/* ── Responsive ── */
+@media(max-width:768px){
+  .grid { grid-template-columns:repeat(2,1fr); }
+  .card-wide { grid-column:span 2; }
+  .pg { padding:70px 18px 40px; }
+  .tb h1 { font-size:1.6rem; }
+  .health-value { font-size:1.3rem; }
+  .ub { padding:0 16px; }
+  .ub-nav { gap:2px; }
+  .ub-nav a { padding:5px 8px; font-size:0.7rem; }
+}
+@media(max-width:480px){
+  .grid { grid-template-columns:1fr 1fr; }
+  .card-wide { grid-column:span 2; }
+  .tb h1 { font-size:1.35rem; }
+  .pg { padding:64px 14px 32px; }
+  .ub-brand { font-size:0.75rem; }
+  .card-value { font-size:1rem; }
+  .tb-badges { flex-direction:column; align-items:center; }
+}
+</style>
+</head>
+<body>
+
+<!-- Utility Bar (shared) -->
+<div id="nav-container"></div>
+<script src="/assets/nav.js"></script>
+
+<div class="pg">
+
+  <!-- Title Block -->
+  <div class="tb">
+    <h1>TSUNAGI Node Status</h1>
+    <p class="st">Live operational telemetry from the TSUNAGI preview node</p>
+    <div class="tb-badges">
+      <span class="tb-badge tb-badge-net" id="badge-net">Preview Network</span>
+      <span class="tb-badge tb-badge-live"><span class="tb-badge-dot"></span> Live Status</span>
+    </div>
+  </div>
+
+  <!-- Health Banner -->
+  <div class="health-banner">
+    <div class="health-label">Overall Health</div>
+    <div class="health-value health-unknown" id="health-display">Loading&hellip;</div>
+    <div style="display:flex;justify-content:center;gap:16px;margin-top:8px;">
+      <span style="font-family:var(--mono);font-size:0.68rem;color:var(--text-d);" id="hb-score">Score: --</span>
+      <span style="font-family:var(--mono);font-size:0.68rem;color:var(--text-d);" id="hb-state">State: --</span>
+      <span style="font-family:var(--mono);font-size:0.68rem;color:var(--text-d);" id="hb-reason">Reason: --</span>
+    </div>
+  </div>
+
+  <!-- ── Chain ── -->
+  <div class="group-label">Chain</div>
+  <div class="grid" id="grid-chain">
+    <div class="card">
+      <div class="card-label">Network</div>
+      <div class="card-value sm" id="v-network">Loading&hellip;</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Latest Slot</div>
+      <div class="card-value" id="v-slot">Loading&hellip;</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Latest Block</div>
+      <div class="card-value" id="v-block">Loading&hellip;</div>
+    </div>
+    <div class="card">
+      <div class="card-label">TPS</div>
+      <div class="card-value" id="v-tps">Loading&hellip;</div>
+    </div>
+    <div class="card card-wide">
+      <div class="card-label">Tip Hash</div>
+      <div class="card-value hash" id="v-tip">Loading&hellip;</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Roll Forward</div>
+      <div class="card-value" id="v-fwd">Loading&hellip;</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Roll Back</div>
+      <div class="card-value" id="v-back">Loading&hellip;</div>
+    </div>
+  </div>
+
+  <!-- ── Ledger ── -->
+  <div class="group-label">Ledger</div>
+  <div class="grid" id="grid-ledger">
+    <div class="card">
+      <div class="card-label">Tx Count</div>
+      <div class="card-value" id="v-tx-count">Loading&hellip;</div>
+    </div>
+    <div class="card">
+      <div class="card-label">UTxO Consumed</div>
+      <div class="card-value" id="v-utxo-consumed">Loading&hellip;</div>
+    </div>
+    <div class="card">
+      <div class="card-label">UTxO Produced</div>
+      <div class="card-value" id="v-utxo-produced">Loading&hellip;</div>
+    </div>
+    <div class="card">
+      <div class="card-label">UTxO Delta</div>
+      <div class="card-value" id="v-utxo-delta">Loading&hellip;</div>
+    </div>
+  </div>
+
+  <!-- ── Persistence ── -->
+  <div class="group-label">Persistence</div>
+  <div class="grid" id="grid-persist">
+    <div class="card">
+      <div class="card-label">UTxO Estimate</div>
+      <div class="card-value" id="v-utxo">Loading&hellip;</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Coverage Found</div>
+      <div class="card-value" id="v-cov-found">Loading&hellip;</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Coverage Total</div>
+      <div class="card-value" id="v-cov-total">Loading&hellip;</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Fallback Used</div>
+      <div class="card-value sm" id="v-fallback">Loading&hellip;</div>
+    </div>
+  </div>
+
+  <!-- ── Health ── -->
+  <div class="group-label">Health</div>
+  <div class="grid" id="grid-health">
+    <div class="card">
+      <div class="card-label">Shadow Verification</div>
+      <div class="card-value sm" id="v-shadow">Loading&hellip;</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Primary Ledger Mode</div>
+      <div class="card-value sm val-mode" id="v-mode">Loading&hellip;</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Tip Age</div>
+      <div class="card-value" id="v-tip-age">Loading&hellip;</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Overall Status</div>
+      <div class="card-value sm" id="v-status">Loading&hellip;</div>
+    </div>
+    <div class="card card-wide">
+      <div class="card-label">Last Updated</div>
+      <div class="card-value sm" id="v-updated">Loading&hellip;</div>
+    </div>
+  </div>
+
+  <!-- ── Subsystem Verification ── -->
+  <div class="group-label">Subsystem Verification</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:8px;">
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid rgba(80,120,180,0.06);">
+      <span style="color:#3da86f;font-size:0.9rem;">&#10003;</span>
+      <span style="font-family:var(--mono);font-size:0.72rem;font-weight:600;color:var(--text-d);min-width:110px;">ChainSync</span>
+      <span style="font-size:0.82rem;color:var(--text);">Live — following preview chain</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid rgba(80,120,180,0.06);">
+      <span style="color:#3da86f;font-size:0.9rem;">&#10003;</span>
+      <span style="font-family:var(--mono);font-size:0.72rem;font-weight:600;color:var(--text-d);min-width:110px;">TX Decode</span>
+      <span style="font-size:0.82rem;color:var(--text);">CBOR decode + cert/script/collateral/withdrawal flags</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid rgba(80,120,180,0.06);">
+      <span style="color:#3da86f;font-size:0.9rem;">&#10003;</span>
+      <span style="font-family:var(--mono);font-size:0.72rem;font-weight:600;color:var(--text-d);min-width:110px;">UTxO + LMDB</span>
+      <span style="font-size:0.82rem;color:var(--text);">Ancestry-verified persistent ledger</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid rgba(80,120,180,0.06);">
+      <span style="color:#3da86f;font-size:0.9rem;">&#10003;</span>
+      <span style="font-family:var(--mono);font-size:0.72rem;font-weight:600;color:var(--text-d);min-width:110px;">Mempool</span>
+      <span style="font-size:0.82rem;color:var(--text);">Six-gate admission + confirmed eviction</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid rgba(80,120,180,0.06);">
+      <span style="color:#3da86f;font-size:0.9rem;">&#10003;</span>
+      <span style="font-family:var(--mono);font-size:0.72rem;font-weight:600;color:var(--text-d);min-width:110px;">TxSubmission2</span>
+      <span style="font-size:0.82rem;color:var(--text);">Bidirectional: serve + ingest proven</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid rgba(80,120,180,0.06);">
+      <span style="color:#3da86f;font-size:0.9rem;">&#10003;</span>
+      <span style="font-family:var(--mono);font-size:0.72rem;font-weight:600;color:var(--text-d);min-width:110px;">Trust Stack</span>
+      <span style="font-size:0.82rem;color:var(--text);">Eight signed layers, all verifiable</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid rgba(80,120,180,0.06);">
+      <span style="color:#3da86f;font-size:0.9rem;">&#10003;</span>
+      <span style="font-family:var(--mono);font-size:0.72rem;font-weight:600;color:var(--text-d);min-width:110px;">Operator Core</span>
+      <span style="font-size:0.82rem;color:var(--text);">Health 0&ndash;100, runtime state, guardian</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid rgba(80,120,180,0.06);">
+      <span style="color:#3da86f;font-size:0.9rem;">&#10003;</span>
+      <span style="font-family:var(--mono);font-size:0.72rem;font-weight:600;color:var(--text-d);min-width:110px;">Propagation</span>
+      <span style="font-size:0.82rem;color:var(--text);">Headers + blocks + TxSub to relays</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid rgba(80,120,180,0.06);">
+      <span style="color:#3da86f;font-size:0.9rem;">&#10003;</span>
+      <span style="font-family:var(--mono);font-size:0.72rem;font-weight:600;color:var(--text-d);min-width:110px;">Block Forge</span>
+      <span style="font-size:0.82rem;color:var(--text);">VRF + KES, deferred slot-time, preview</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 18px;">
+      <span style="color:#a89b3d;font-size:0.9rem;">&#9679;</span>
+      <span style="font-family:var(--mono);font-size:0.72rem;font-weight:600;color:var(--text-d);min-width:110px;">Not Yet</span>
+      <span style="font-size:0.82rem;color:var(--amber);">Plutus, native scripts, protocol params, epoch transitions</span>
+    </div>
+  </div>
+  <div style="font-size:0.78rem;color:var(--text-d);margin:12px 0 8px;padding:0 4px;font-family:var(--sans);">
+    Forge acceptance is probabilistic. With current stake, VRF leader slots occur approximately every 4&ndash;5 hours on preview.
+    The node forges a block when elected, promotes it atomically to the propagation artifact, and serves it to the connected relay via LIVE_PUSH.
+  </div>
+
+  <!-- Refresh Indicator -->
+  <div class="refresh-bar">
+    <span class="refresh-dot" id="refresh-dot"></span>
+    <span class="refresh-text" id="refresh-text">Connecting&hellip;</span>
+  </div>
+
+  <!-- Error state (hidden by default) -->
+  <div class="error-box" id="error-box" style="display:none;">
+    <div class="icon" style="font-size:1.5rem;margin-bottom:8px;">&#128752;</div>
+    <div class="msg" style="font-size:0.95rem;color:var(--text-m);">Public telemetry temporarily unavailable</div>
+    <div class="sub" style="font-size:0.82rem;color:var(--text-d);margin-top:8px;">
+      When connected, this page shows live chain, ledger, and health metrics.<br>
+      Operators can access local data at: GET /state &middot; GET /status &middot; GET /metrics
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="ft">
+    <p class="fm">Let It Run. Let It Resolve.</p>
+    <p>tsunagi.tech &middot; Independent Cardano infrastructure research</p>
+  </div>
+
+</div>
+
+<script>
+(function() {
+  var INTERVAL = 10000;
+  var timer = null;
+  var lastOk = false;
+  var allGrids = ['grid-chain','grid-ledger','grid-persist','grid-health'];
+
+  function fmt(n) {
+    if (n == null) return '\u2014';
+    return Number(n).toLocaleString('en-US');
+  }
+
+  function healthClass(s) {
+    if (s === 'healthy') return 'health-healthy';
+    if (s === 'converging') return 'health-converging';
+    if (s === 'warn' || s === 'warning') return 'health-warn';
+    if (s === 'critical') return 'health-critical';
+    return 'health-unknown';
+  }
+
+  function statusClass(s) {
+    if (s === 'healthy') return 'val-healthy';
+    if (s === 'warn' || s === 'warning') return 'val-warn';
+    if (s === 'critical') return 'val-critical';
+    return '';
+  }
+
+  function ageClass(s) {
+    if (s == null) return '';
+    if (s > 600) return 'val-critical';
+    if (s > 120) return 'val-warn';
+    return 'val-healthy';
+  }
+
+  function formatTime(iso) {
+    if (!iso) return '\u2014';
+    try {
+      var d = new Date(iso);
+      var now = new Date();
+      var diff = Math.floor((now - d) / 1000);
+      var ts = d.toLocaleTimeString('en-US', { hour12: false }) + ' UTC';
+      if (diff < 60) return ts + ' (' + diff + 's ago)';
+      if (diff < 3600) return ts + ' (' + Math.floor(diff / 60) + 'm ago)';
+      return ts + ' (' + Math.floor(diff / 3600) + 'h ago)';
+    } catch (e) { return iso; }
+  }
+
+  function blink() {
+    var dot = document.getElementById('refresh-dot');
+    dot.classList.add('active');
+    setTimeout(function() { dot.classList.remove('active'); }, 600);
+  }
+
+  function showError() {
+    document.getElementById('error-box').style.display = 'block';
+    for (var i = 0; i < allGrids.length; i++) {
+      document.getElementById(allGrids[i]).style.opacity = '0.3';
+    }
+    document.getElementById('refresh-text').textContent = 'Status unavailable \u2014 retrying';
+    var hd = document.getElementById('health-display');
+    hd.textContent = 'CONNECTING';
+    hd.className = 'health-value health-unknown';
+    lastOk = false;
+  }
+
+  function showOk() {
+    document.getElementById('error-box').style.display = 'none';
+    for (var i = 0; i < allGrids.length; i++) {
+      document.getElementById(allGrids[i]).style.opacity = '1';
+    }
+    lastOk = true;
+  }
+
+  function update(d) {
+    showOk();
+
+    // ── Chain ──
+    document.getElementById('v-network').textContent = d.network || '\u2014';
+    document.getElementById('v-slot').textContent = fmt(d.slot);
+    document.getElementById('v-block').textContent = fmt(d.block);
+    document.getElementById('v-tps').textContent = d.tps != null ? Number(d.tps).toFixed(2) : '\u2014';
+    document.getElementById('v-tip').textContent = d.tip_hash || '\u2014';
+    document.getElementById('v-fwd').textContent = fmt(d.fwd);
+    document.getElementById('v-back').textContent = fmt(d.back);
+
+    // ── Ledger ──
+    document.getElementById('v-tx-count').textContent = fmt(d.tx_count);
+    document.getElementById('v-utxo-consumed').textContent = fmt(d.utxo_consumed);
+    document.getElementById('v-utxo-produced').textContent = fmt(d.utxo_produced);
+
+    var dv = document.getElementById('v-utxo-delta');
+    if (d.utxo_delta != null) {
+      var n = Number(d.utxo_delta);
+      dv.textContent = (n >= 0 ? '+' : '') + fmt(n);
+      dv.className = 'card-value ' + (n >= 0 ? 'val-healthy' : 'val-warn');
+    } else {
+      dv.textContent = '\u2014';
+      dv.className = 'card-value';
+    }
+
+    // ── Persistence ──
+    document.getElementById('v-utxo').textContent = fmt(d.utxo);
+    document.getElementById('v-cov-found').textContent = fmt(d.coverage_found);
+    document.getElementById('v-cov-total').textContent = fmt(d.coverage_total);
+
+    var fbv = document.getElementById('v-fallback');
+    if (d.fallback_used === true) {
+      fbv.textContent = 'YES';
+      fbv.className = 'card-value sm val-warn';
+    } else if (d.fallback_used === false) {
+      fbv.textContent = 'NO';
+      fbv.className = 'card-value sm val-enabled';
+    } else {
+      fbv.textContent = '\u2014';
+      fbv.className = 'card-value sm';
+    }
+
+    // ── Health ──
+    var sv = document.getElementById('v-shadow');
+    if (d.shadow_enabled === true) {
+      sv.textContent = 'ENABLED';
+      sv.className = 'card-value sm val-enabled';
+    } else if (d.shadow_enabled === false) {
+      sv.textContent = 'DISABLED';
+      sv.className = 'card-value sm val-disabled';
+    } else {
+      sv.textContent = '\u2014';
+      sv.className = 'card-value sm';
+    }
+
+    var mv = document.getElementById('v-mode');
+    mv.textContent = d.primary_mode || '\u2014';
+    mv.className = 'card-value sm val-mode';
+
+    // Tip Age
+    var tav = document.getElementById('v-tip-age');
+    if (d.tip_age_seconds != null) {
+      var age = Number(d.tip_age_seconds);
+      tav.textContent = age + 's';
+      tav.className = 'card-value ' + ageClass(age);
+    } else {
+      tav.textContent = '\u2014';
+      tav.className = 'card-value';
+    }
+
+    // Status
+    var stv = document.getElementById('v-status');
+    var status = d.status || 'unknown';
+    stv.textContent = status.toUpperCase();
+    stv.className = 'card-value sm ' + statusClass(status);
+
+    // Health banner
+    var hd = document.getElementById('health-display');
+    hd.textContent = status.toUpperCase();
+    hd.className = 'health-value ' + healthClass(status);
+
+    // Updated
+    document.getElementById('v-updated').textContent = formatTime(d.updated_at);
+
+    // Network badge
+    var nb = document.getElementById('badge-net');
+    if (d.network) {
+      nb.textContent = d.network.charAt(0).toUpperCase() + d.network.slice(1) + ' Network';
+    }
+
+    // Refresh text
+    document.getElementById('refresh-text').textContent = 'Refreshing every 10s';
+  }
+
+  function fetchStatus() {
+    blink();
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', '/data/status.json', true);
+    xhr.timeout = 8000;
+    xhr.onload = function() {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          var data = JSON.parse(xhr.responseText);
+          update(data);
+        } catch (e) {
+          showError();
+        }
+      } else {
+        showError();
+      }
+    };
+    xhr.onerror = function() { showError(); };
+    xhr.ontimeout = function() { showError(); };
+    xhr.send();
+  }
+
+  function fetchNodeState() {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', '/data/node-state.json', true);
+    xhr.timeout = 8000;
+    xhr.onload = function() {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          var d = JSON.parse(xhr.responseText);
+          var bp = d.baey_policy || {};
+          var e_score = document.getElementById('hb-score');
+          var e_state = document.getElementById('hb-state');
+          var e_reason = document.getElementById('hb-reason');
+          if (e_score && bp.health_score != null) {
+            e_score.textContent = 'Score: ' + bp.health_score + '/100 ' + (bp.health_band || '');
+            var bc = bp.health_band === 'GREEN' ? '#3da86f' : bp.health_band === 'YELLOW' ? '#a89b3d' : bp.health_band === 'ORANGE' ? '#c87a3d' : bp.health_band === 'RED' ? '#a83d3d' : 'var(--text-d)';
+            e_score.style.color = bc;
+          }
+          if (e_state) e_state.textContent = 'State: ' + (bp.rt_state || '--');
+          if (e_reason) e_reason.textContent = 'Reason: ' + (bp.health_primary || '--');
+        } catch(e) {}
+      }
+    };
+    xhr.send();
+  }
+
+  // Initial fetch
+  fetchStatus();
+  fetchNodeState();
+
+  // Auto-refresh
+  timer = setInterval(function() { fetchStatus(); fetchNodeState(); }, INTERVAL);
+})();
+</script>
+
+</body>
+</html>

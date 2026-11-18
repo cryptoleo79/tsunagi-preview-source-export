@@ -1,0 +1,69 @@
+zig-cache/
+.zig-cache/
+zig-out/
+tmp/
+tsunagi.toml
+# Zig build artifacts
+zig-cache/
+zig-out/
+.zig-cache/
+.cache/
+.out/
+return
+
+# Project-local caches (tsunagi-node)
+tsunagi-node/.cache/
+tsunagi-node/zig-cache/
+tsunagi-node/zig-out/
+tsunagi-node/.zig-cache/
+tsunagi-node/.out/
+tsunagi-node/return
+
+# Runtime state (TSUNAGI_HOME)
+*.snapshot
+cursor.json
+journal.ndjson
+
+# Logs
+*.log
+/tmp/tsunagi*.log
+
+# Object/library artifacts
+*.o
+*.a
+*.so
+*.dylib
+
+# Temp files
+*.tmp
+
+# TSUNAGI local artifacts (do not commit)
+SHA256SUMS
+test_math3
+release-proof-v1.6.0/
+tsunagi-fork-proof-*.zip
+tsunagi-node-*-linux-amd64.tar.gz
+
+# Proof outputs (scoped to dryrun/forge dirs)
+**/producer_dryrun/**/SHA256SUMS
+**/producer_dryrun/**/proof_bundles/*.zip
+**/producer_dryrun/**/blocks_proof_bundles/*.zip
+**/producer_forge_sim/**/SHA256SUMS
+**/producer_forge_sim/**/proof_bundles/*.zip
+
+# Zig build artifacts
+.zig-cache/
+zig-cache/
+zig-out/
+*.o
+*.a
+
+# Your local global cache dir
+tsunagi-node/.zig-global-015/
+
+# Logs / runtime
+tsunagi-logs/
+*.log
+
+# OS / editor
+.DS_Store

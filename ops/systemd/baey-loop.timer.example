@@ -1,0 +1,16 @@
+# Periodic trigger for BAEY Guardian dry-run policy ticks.
+#
+# Runs every 30 seconds; the service is oneshot so runs serialize automatically.
+# Produces a continuous explainable audit stream without changing node behavior.
+
+[Unit]
+Description=Periodic Tsunagi BAEY Guardian policy tick
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=30s
+AccuracySec=5s
+Persistent=true
+
+[Install]
+WantedBy=timers.target

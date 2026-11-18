@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TSUNAGI Treasury — 透明なオンチェーン資金</title>
+<meta name="description" content="TSUNAGI Treasury：独立Cardanoインフラ開発のための透明なオンチェーン資金モデル。">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #05080e;
+  --bg-surface: #0a0f1a;
+  --bg-card: rgba(12,18,30,0.65);
+  --border: rgba(80,120,180,0.12);
+  --border-accent: rgba(80,140,220,0.35);
+  --text: #c8ced8;
+  --text-h: #e8ecf2;
+  --text-m: #7a8598;
+  --text-d: #4c5668;
+  --accent: #3d6fa8;
+  --accent-l: #5a8ec8;
+  --white: #eceef3;
+  --green: #3da86f;
+  --green-bg: rgba(61,168,111,0.08);
+  --green-border: rgba(61,168,111,0.25);
+  --mono: 'SF Mono','Cascadia Code','Fira Code','Consolas',monospace;
+  --sans: -apple-system,BlinkMacSystemFont,'Segoe UI','Inter','Hiragino Sans','Hiragino Kaku Gothic ProN','Noto Sans JP',Helvetica,Arial,sans-serif;
+  --serif: 'Charter','Georgia','Cambria','Times New Roman',serif;
+}
+html { scroll-behavior: smooth; }
+body { font-family: var(--sans); background: var(--bg); color: var(--text); line-height: 1.82; font-size: 16px; overflow-x: hidden; }
+
+.ub { position:fixed; top:0; left:0; right:0; z-index:100; height:48px; display:flex; align-items:center; justify-content:space-between; padding:0 28px; background:rgba(5,8,14,0.92); backdrop-filter:blur(14px); border-bottom:1px solid var(--border); }
+.ub-l { display:flex; align-items:center; gap:20px; }
+.ub-brand { font-size:0.82rem; font-weight:700; letter-spacing:0.14em; color:var(--white); text-decoration:none; }
+.ub-nav { display:flex; gap:6px; flex-wrap:wrap; }
+.ub-nav a { font-size:0.75rem; font-weight:500; letter-spacing:0.03em; color:var(--text-m); text-decoration:none; padding:5px 12px; border-radius:4px; border:1px solid transparent; transition:all 0.2s; }
+.ub-nav a:hover { color:var(--white); border-color:var(--border-accent); background:rgba(60,112,180,0.08); }
+.lang-switch { display:flex; align-items:center; gap:6px; margin-left:12px; font-size:0.75rem; white-space:nowrap; }
+.lang-switch a { text-decoration:none; color:var(--text-m); transition:color 0.2s ease; }
+.lang-switch a:hover { color:var(--text); }
+.lang-cur { color:var(--accent-l) !important; font-weight:600; }
+.lang-div { opacity:0.4; }
+
+.pg { max-width:720px; margin:0 auto; padding:80px 28px 60px; }
+
+.tb { text-align:center; padding:60px 0 48px; border-bottom:1px solid var(--border); margin-bottom:48px; }
+.tb h1 { font-size:2.1rem; font-weight:700; color:var(--white); letter-spacing:0.04em; margin-bottom:8px; }
+.tb .st { font-size:1.05rem; color:var(--text-m); font-style:italic; margin-bottom:28px; }
+
+/* Status badge */
+.dev-badge { display:inline-flex; align-items:center; gap:8px; margin:0 auto 48px; padding:10px 20px; font-family:var(--mono); font-size:0.76rem; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; border-radius:4px; }
+.dev-badge-dot { width:8px; height:8px; border-radius:50%; animation:pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+.badge-wrap { text-align:center; }
+
+h2 { font-size:1.35rem; font-weight:700; color:var(--text-h); margin:52px 0 20px; padding-bottom:10px; border-bottom:1px solid var(--border); }
+p { margin-bottom:16px; line-height:1.82; }
+strong { color:var(--text-h); }
+.pg a { color:var(--accent-l); text-decoration:none; border-bottom:1px solid rgba(90,142,200,0.3); }
+.pg a:hover { border-color:var(--accent-l); }
+ul { margin:0 0 16px 24px; }
+li { margin-bottom:8px; line-height:1.7; }
+hr { border:none; border-top:1px solid var(--border); margin:48px 0; }
+
+/* Info cards */
+.info-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:32px 0; }
+.info-card { background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:20px 22px; }
+.info-label { font-family:var(--mono); font-size:0.68rem; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--accent-l); margin-bottom:8px; }
+.info-value { font-family:var(--mono); font-size:0.88rem; color:var(--text-d); font-style:italic; }
+
+/* Principles list */
+.principles { background:var(--bg-surface); border-left:3px solid var(--accent); padding:24px 28px; border-radius:0 6px 6px 0; margin:32px 0; }
+.principles ul { margin:0 0 0 20px; }
+.principles li { font-size:0.92rem; margin-bottom:8px; }
+
+.closing { text-align:center; padding:40px 0; margin-top:20px; }
+.closing p { text-align:center; font-size:1rem; color:var(--text-m); margin-bottom:12px; }
+.closing .motto { font-size:1.2rem; font-weight:600; color:var(--white); font-style:italic; }
+
+.ft { text-align:center; padding:40px 0 32px; border-top:1px solid var(--border); margin-top:60px; }
+.ft p { font-size:0.78rem; color:var(--text-d); text-align:center; letter-spacing:0.03em; }
+.ft .fm { font-size:0.88rem; color:var(--text-m); font-weight:600; margin-bottom:8px; }
+
+@media(max-width:768px){ body{font-size:15px;} .pg{padding:70px 18px 40px;} .tb h1{font-size:1.7rem;} .info-grid{grid-template-columns:1fr;} .ub{padding:0 16px;} .ub-nav a{padding:5px 8px;font-size:0.7rem;} }
+@media(max-width:480px){ body{font-size:14.5px;} .tb h1{font-size:1.4rem;} .pg{padding:64px 14px 32px;} }
+</style>
+</head>
+<body>
+
+<div class="ub">
+  <div class="ub-l"><a href="/" class="ub-brand">TSUNAGI</a></div>
+  <nav class="ub-nav">
+    <a href="/">Home</a>
+    <a href="/whitepaper/">Whitepaper</a>
+    <a href="/manifesto/">Manifesto</a>
+    <a href="/roadmap/">Roadmap</a>
+    <a href="/architecture/">Architecture</a>
+    <a href="/status/">Status</a>
+    <a href="/explorer/">Explorer</a>
+    <a href="/decode/">Decode</a>
+    <a href="/install/">Install</a>
+    <a href="/operator/">Operator</a>
+    <a href="/vision/">Vision</a>
+    <a href="/network/">Network</a>
+    <a href="/labs/">Labs</a>
+    <a href="/project/">Source</a>
+    <a href="/treasury/">Treasury</a>
+
+    <div class="lang-switch">
+      <a href="/" class="lang-cur">EN</a>
+      <span class="lang-div">|</span>
+      <a href="/jp/">日本語</a>
+    </div>
+  </nav>
+</div>
+
+<div class="pg">
+
+<div class="tb">
+  <h1>TSUNAGI Treasury</h1>
+  <div class="st">独立Cardanoインフラのための透明なオンチェーン資金</div>
+</div>
+
+<div class="badge-wrap">
+  <span class="dev-badge" style="color:#3da86f;background:rgba(61,168,111,0.08);border-color:rgba(61,168,111,0.25);border:1px solid rgba(61,168,111,0.25);"><span class="dev-badge-dot" style="background:#3da86f;"></span> TSUNA Pool &mdash; 稼働中</span>
+</div>
+
+<h2>1. トレジャリーが必要な理由</h2>
+
+<p>独立したインフラ開発には持続可能な資金が必要です。TSUNAGIは制度的な資金構造の外で開発されています &mdash; Catalystへの提案なし、ガバナンス助成金なし、ベンチャーキャピタルなし。このプロジェクトは、デリゲーターおよび支援者からの透明で自発的な支援に依存しています。</p>
+
+<p>持続的な開発には以下のリソースが必要です：</p>
+
+<ul>
+  <li><strong>インフラ</strong> &mdash; プレビューおよびメインネットの検証ノードに必要なサーバー、ネットワーク帯域、ストレージ。</li>
+  <li><strong>テスト</strong> &mdash; 長時間ソーク実行、クロスネットワーク検証、スナップショット整合性検証には、専用の計算資源が必要です。</li>
+  <li><strong>研究</strong> &mdash; プロトコル仕様の分析、クロスチェーン実験、代替ストレージエンジンの評価。</li>
+  <li><strong>エンジニアリング時間</strong> &mdash; 決定論的パイプライン、シャドウ検証、可観測性スタック、永続ストレージは、数千時間の集中したエンジニアリングの成果です。</li>
+  <li><strong>長期メンテナンス</strong> &mdash; プロトコルアップグレード、ハードフォーク互換性、セキュリティパッチ、運用ツールは、ネットワークの存続期間を通じた継続的な注力が必要です。</li>
+</ul>
+
+<hr>
+
+<h2>2. 独立したエンジニアリング</h2>
+
+<p>TSUNAGIは、独立した研究開発活動として始まりました。このプロジェクトは、制度的な助成金、ガバナンス資金、ベンチャーキャピタルなしに構築されてきました &mdash; 個人の取り組みと、Cardanoが実装の多様性、決定論的インフラ、オペレータ第一の設計から恩恵を受けるという確信のみによって維持されています。</p>
+
+<p>この独立性は意図的なものです。開発の優先順位は、提案サイクルや資金委員会、外部のロードマップ要件ではなく、エンジニアリングの判断と運用上の現実に基づいて決定されます。アーキテクチャは、何が資金調達可能かではなく、技術的メリット &mdash; 決定論的実行、明示的メモリ管理、組み込みの可観測性 &mdash; のために行われた選択を反映しています。</p>
+
+<p>これまでの成果 &mdash; 決定論的台帳パイプライン、シャドウ検証、LMDB永続化、4つの可観測性サブシステム、継続的なプレビューネットワーク検証 &mdash; は、数千時間の集中したエンジニアリングを表しています。この水準の取り組みを維持するには、独立性に見合った資金モデルが必要です：透明で、コミュニティに整合し、制度的依存から自由なモデルです。</p>
+
+<p>コミュニティの支援が重要なのは、独立したインフラ開発が独立を維持するためには、持続可能になる必要があるからです。以下に説明するトレジャリーモデルは、プロジェクトを定義するエンジニアリングの自律性を守りながら、持続可能性を実現するよう設計されています。</p>
+
+<hr>
+
+<h2>3. TSUNAGIの資金モデル</h2>
+
+<p>TSUNAGIトレジャリーは、<strong>TSUNA</strong>ステークプール &mdash; Cardanoのステーキングモデルに整合したオンチェーン資金メカニズム &mdash; を通じて運営されています。</p>
+
+<ul>
+  <li>貢献は<strong>TSUNAGIトレジャリーウォレット</strong> &mdash; プロジェクト資金に専用のCardanoアドレスで、ADAハンドル<strong>$tsunagi</strong>経由で到達可能 &mdash; に送られます。</li>
+  <li>トレジャリーウォレットは<strong>TSUNAステークプール</strong>（TSUNAGI Infrastructure）にデリゲートされ、貢献されたADAがネットワークに積極的に参加します。</li>
+  <li>デリゲートされたトレジャリーステークは<strong>生産的</strong>になります：時間とともに複利でステーキング報酬を獲得し、自己強化型の資金メカニズムを生み出します。</li>
+  <li>ステーキング報酬は<strong>継続的なノード開発</strong>、インフラコスト、研究活動を支援します。</li>
+  <li>すべてのトレジャリー活動は<strong>オンチェーンで公開</strong>されています。コミュニティのメンバーは、トレジャリーウォレットの残高、デリゲーション状況、トランザクション履歴を検証できます。</li>
+</ul>
+
+<hr>
+
+<h2>4. 透明性の原則</h2>
+
+<div class="principles">
+  <ul>
+    <li><strong>トレジャリーウォレットアドレス</strong> &mdash; プロジェクト専用アドレス。公開後、オンチェーンで検証可能。</li>
+    <li><strong>ステークプールID</strong> &mdash; プールティッカーとプールIDが公開され、デリゲーターがデリゲーション状況を検証可能です。</li>
+    <li><strong>支援アドレス</strong> &mdash; 貢献用の専用ADAハンドルまたはアドレスで、個人ウォレットとは区別されています。</li>
+    <li><strong>公開資金説明</strong> &mdash; この文書が、トレジャリーモデルとその原則の正式な説明です。</li>
+    <li><strong>資金の分離</strong> &mdash; トレジャリーウォレットは、プロジェクト資金に専用の独立したアドレスです。個人資金との混合はありません。</li>
+  </ul>
+</div>
+
+<hr>
+
+<h2>5. このモデルが重要な理由</h2>
+
+<ul>
+  <li><strong>自律維持型インフラ資金。</strong> トレジャリーは、定期的な助成金や一回限りの寄付に依存せず、継続的なステーキング報酬を生成します。</li>
+  <li><strong>助成金への依存度低減。</strong> 開発の優先順位は、資金タイムラインやガバナンスサイクルではなく、エンジニアリング要件によって設定されます。</li>
+  <li><strong>Cardanoステーキングモデルとの整合。</strong> トレジャリーステークはデリゲート先のプールを強化し、分散化に貢献します。</li>
+  <li><strong>長期的なエコシステムの回復力。</strong> 持続可能な資金を持つ独立した実装は、永続的なインフラの多様性を提供します。</li>
+</ul>
+
+<hr>
+
+<h2>6. プールID</h2>
+
+<p>TSUNAGIトレジャリーモデルは、以下のオンチェーンIDを通じて運営されています：</p>
+
+<div class="info-grid">
+  <div class="info-card">
+    <div class="info-label">Pool Name</div>
+    <div class="info-value" style="color:var(--text-h);font-style:normal;">TSUNAGI Infrastructure</div>
+  </div>
+  <div class="info-card">
+    <div class="info-label">Ticker</div>
+    <div class="info-value" style="color:var(--text-h);font-style:normal;">TSUNA</div>
+  </div>
+  <div class="info-card">
+    <div class="info-label">ADA Handle</div>
+    <div class="info-value" style="color:var(--text-h);font-style:normal;">$tsunagi</div>
+  </div>
+  <div class="info-card">
+    <div class="info-label">Pool ID</div>
+    <div class="info-value" style="font-size:0.68rem;word-break:break-all;">pool1hnmcevsa69k88nh4d6ud5qyykwmgzrg6crju79zsv2uu65mkgr8</div>
+  </div>
+</div>
+
+<p>TSUNAプールは、プロジェクトに整合したステークプールIDです。TSUNAへのデリゲーションは、TSUNAGIのインフラと開発を支援しながら、ネットワーク分散化に貢献します。透明性、オンチェーンの可視性、資金の分離、Cardanoステーキングモデルとの整合という基本原則は固定されています。</p>
+
+<hr>
+
+<h2>7. おわりに</h2>
+
+<div class="closing">
+  <p>TSUNAGIは、独立した実装を通じてCardanoを強化するために存在します。<br>トレジャリーは、その活動を透明に維持するために存在します。</p>
+  <p class="motto">Let It Run. Let It Resolve.</p>
+</div>
+
+<div class="ft">
+  <p class="fm">Let It Run. Let It Resolve.</p>
+  <p>tsunagi.tech &middot; 独立Cardanoインフラ研究 &middot; 2026</p>
+</div>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,41 @@
+# Tsunagi mainnet relay — installed from GitHub Release
+[Unit]
+Description=Tsunagi Mainnet Relay
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=600
+StartLimitBurst=10
+
+[Service]
+Type=simple
+WorkingDirectory=%h/.local/tsunagi/current
+ExecStart=%h/.local/tsunagi/current/bin/tsunagi-node run --net mainnet --lang en
+
+# === TSUNAGI ENVIRONMENT ===
+Environment=TSUNAGI_HOME=%h/tsunagi-home-mainnet
+Environment=TSUNAGI_CAPTURE=1
+Environment=TSUNAGI_METRICS=1
+Environment=TSUNAGI_METRICS_ADDR=127.0.0.1
+Environment=TSUNAGI_METRICS_PORT=9080
+Environment=TSUNAGI_LMDB=%h/tsunagi-home-mainnet/lmdb
+Environment=TSUNAGI_LMDB_TRUTH=0
+Environment=TSUNAGI_LMDB_AUTHORITY=0
+
+# === RESTART ===
+Restart=always
+RestartSec=30
+
+# === SECURITY ===
+ProtectSystem=strict
+ProtectHome=true
+ReadOnlyPaths=%h/.local/tsunagi
+ReadWritePaths=%h/tsunagi-home-mainnet
+NoNewPrivileges=true
+PrivateTmp=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictNamespaces=true
+
+[Install]
+WantedBy=default.target

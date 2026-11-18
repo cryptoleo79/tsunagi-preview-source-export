@@ -1,0 +1,10 @@
+# Nightly auto vector capture — preview
+[Unit]
+Description=Nightly Tsunagi Auto Capture (preview)
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+
+[Install]
+WantedBy=timers.target

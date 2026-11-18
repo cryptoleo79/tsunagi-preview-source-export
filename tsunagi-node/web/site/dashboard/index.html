@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TSUNAGI Dashboard — Live Operator View</title>
+<meta name="description" content="TSUNAGI live operator dashboard: real-time Cardano node telemetry.">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #05080e;
+  --bg-card: rgba(12,18,30,0.65);
+  --border: rgba(80,120,180,0.10);
+  --border-hover: rgba(80,120,180,0.28);
+  --text: #d0d6e2;
+  --text-m: #7a8598;
+  --text-d: #4c5668;
+  --accent: #3d6fa8;
+  --accent-l: #5a8ec8;
+  --white: #eceef3;
+  --green: #3da86f;
+  --yellow: #c8b83d;
+  --orange: #c87a3d;
+  --red: #a83d3d;
+  --mono: 'SF Mono','Cascadia Code','Fira Code','Consolas',monospace;
+  --sans: -apple-system,BlinkMacSystemFont,'Segoe UI','Inter',Helvetica,Arial,sans-serif;
+}
+html { scroll-behavior: smooth; }
+body { font-family: var(--sans); background: var(--bg); color: var(--text); line-height: 1.6; }
+
+/* Nav */
+.ub { position:fixed; top:0; left:0; right:0; z-index:100; height:48px; display:flex; align-items:center; justify-content:space-between; padding:0 28px; background:rgba(5,8,14,0.92); backdrop-filter:blur(14px); border-bottom:1px solid var(--border); }
+.ub-l { display:flex; align-items:center; gap:20px; }
+.ub-brand { font-size:0.82rem; font-weight:700; letter-spacing:0.14em; color:var(--white); text-decoration:none; }
+.ub-nav { display:flex; gap:6px; flex-wrap:wrap; }
+.ub-nav a { font-size:0.75rem; font-weight:500; letter-spacing:0.03em; color:var(--text-m); text-decoration:none; padding:5px 12px; border-radius:4px; border:1px solid transparent; transition:all 0.2s; }
+.ub-nav a:hover { color:var(--white); border-color:rgba(80,140,220,0.35); background:rgba(60,112,180,0.08); }
+.lang-switch { display:flex; align-items:center; gap:6px; margin-left:12px; font-size:0.75rem; }
+.lang-switch a { text-decoration:none; color:var(--text-m); }
+.lang-cur { color:var(--accent-l) !important; font-weight:600; }
+
+/* Layout */
+.pg { max-width:1100px; margin:0 auto; padding:80px 28px 48px; }
+
+/* Hero */
+.hero {
+  display:flex; align-items:center; gap:40px;
+  padding:40px 44px;
+  background:var(--bg-card);
+  border:1px solid var(--border);
+  border-left:4px solid var(--green);
+  border-radius:12px;
+  min-height:180px;
+  transition:border-color 0.3s;
+}
+.hero-score-area { flex-shrink:0; text-align:center; min-width:140px; }
+.hero-score {
+  font-family:var(--mono);
+  font-size:5rem; font-weight:800;
+  line-height:1; letter-spacing:-0.03em;
+  color:var(--green);
+  transition:color 0.3s;
+}
+.hero-score-label {
+  font-family:var(--mono);
+  font-size:0.55rem; font-weight:600;
+  letter-spacing:0.18em; text-transform:uppercase;
+  color:var(--text-d); margin-top:6px;
+}
+.hero-info { flex:1; min-width:0; }
+.hero-top {
+  display:flex; align-items:baseline; gap:14px; flex-wrap:wrap;
+}
+.hero-title { font-size:1.5rem; font-weight:700; color:var(--white); letter-spacing:0.06em; }
+.hero-pill {
+  display:inline-block; font-family:var(--mono);
+  font-size:0.68rem; font-weight:600; letter-spacing:0.06em;
+  text-transform:uppercase; padding:4px 14px; border-radius:4px;
+  color:var(--green); background:rgba(61,168,111,0.08);
+  border:1px solid rgba(61,168,111,0.25);
+}
+.hero-network {
+  font-family:var(--mono); font-size:0.65rem;
+  color:var(--text-d); letter-spacing:0.06em;
+}
+.hero-summary {
+  font-size:0.95rem; color:var(--text-m);
+  margin-top:10px; font-weight:400;
+}
+.hero-meta {
+  margin-top:12px; font-family:var(--mono);
+  font-size:0.70rem; color:var(--text-d);
+  display:flex; gap:8px; flex-wrap:wrap;
+}
+.hero-meta-sep { opacity:0.4; }
+.hero-refresh {
+  font-family:var(--mono); font-size:0.58rem;
+  color:var(--text-d); margin-top:8px;
+  display:flex; align-items:center; gap:6px;
+}
+.hero-dot {
+  width:6px; height:6px; border-radius:50%;
+  background:var(--green); animation:pulse 2s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+
+/* Activity strip */
+.activity-strip {
+  display:flex; justify-content:space-between;
+  padding:20px 32px; margin-top:14px;
+  background:var(--bg-card);
+  border:1px solid var(--border);
+  border-radius:8px;
+}
+.activity-item { text-align:center; flex:1; }
+.activity-val {
+  font-family:var(--mono); font-size:1.1rem;
+  font-weight:700; color:var(--white);
+}
+.activity-label {
+  font-family:var(--mono); font-size:0.48rem;
+  font-weight:600; letter-spacing:0.1em;
+  text-transform:uppercase; color:var(--text-d); margin-top:4px;
+}
+.activity-window {
+  font-family:var(--mono); font-size:0.48rem;
+  letter-spacing:0.08em; text-transform:uppercase;
+  color:var(--text-d); text-align:right;
+  margin-top:4px; opacity:0.6;
+}
+
+/* Chain row */
+.chain-row {
+  display:flex; gap:24px; padding:14px 32px;
+  margin-top:10px; background:var(--bg-card);
+  border:1px solid var(--border); border-radius:8px;
+}
+.chain-item { display:flex; gap:8px; align-items:baseline; }
+.chain-label {
+  font-family:var(--mono); font-size:0.50rem;
+  font-weight:600; letter-spacing:0.1em;
+  text-transform:uppercase; color:var(--text-d);
+}
+.chain-val {
+  font-family:var(--mono); font-size:0.82rem;
+  font-weight:600; color:var(--text-m);
+}
+
+/* Footer */
+.ft { text-align:center; padding:36px 0 28px; border-top:1px solid var(--border); margin-top:36px; }
+.ft p { font-size:0.78rem; color:var(--text-d); letter-spacing:0.03em; }
+.ft .fm { font-size:0.88rem; color:var(--text-m); font-weight:600; margin-bottom:6px; }
+
+/* Responsive */
+@media(max-width:768px){
+  .hero { flex-direction:column; gap:20px; padding:28px 24px; text-align:center; }
+  .hero-top { justify-content:center; }
+  .hero-meta { justify-content:center; }
+  .hero-score { font-size:3.5rem; }
+  .activity-strip { flex-wrap:wrap; gap:12px; padding:16px 20px; }
+  .activity-item { min-width:80px; }
+  .chain-row { flex-wrap:wrap; gap:12px; }
+  .pg { padding:70px 18px 40px; }
+  .ub { padding:0 16px; }
+  .ub-nav a { padding:5px 8px; font-size:0.7rem; }
+}
+@media(max-width:480px){
+  .hero-score { font-size:2.8rem; }
+  .hero { padding:24px 18px; }
+  .activity-strip { padding:14px 16px; }
+  .activity-val { font-size:0.92rem; }
+}
+</style>
+</head>
+<body>
+
+<div id="nav-container"></div>
+<script src="/assets/nav.js"></script>
+
+<div class="pg">
+
+  <!-- Hero -->
+  <section class="hero" id="hero">
+    <div class="hero-score-area">
+      <div class="hero-score" id="h-score">--</div>
+      <div class="hero-score-label">Health</div>
+    </div>
+    <div class="hero-info">
+      <div class="hero-top">
+        <span class="hero-title">TSUNAGI</span>
+        <span class="hero-pill" id="h-pill">--</span>
+        <span class="hero-network" id="h-net">--</span>
+      </div>
+      <div class="hero-summary" id="h-summary">Connecting&hellip;</div>
+      <div class="hero-meta">
+        <span id="h-slot">--</span>
+        <span class="hero-meta-sep">&middot;</span>
+        <span id="h-block">--</span>
+        <span class="hero-meta-sep">&middot;</span>
+        <span id="h-tip">--</span>
+      </div>
+      <div class="hero-refresh">
+        <span class="hero-dot"></span>
+        <span id="h-updated">Live</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Activity strip -->
+  <section class="activity-strip" id="activity">
+    <div class="activity-item"><div class="activity-val" id="a-blocks">--</div><div class="activity-label">Blocks</div></div>
+    <div class="activity-item"><div class="activity-val" id="a-txs">--</div><div class="activity-label">Txs</div></div>
+    <div class="activity-item"><div class="activity-val" id="a-fees">--</div><div class="activity-label">Fees</div></div>
+    <div class="activity-item"><div class="activity-val" id="a-ada">--</div><div class="activity-label">ADA Moved</div></div>
+    <div class="activity-item"><div class="activity-val" id="a-scripts">--</div><div class="activity-label">Smart Contracts</div></div>
+    <div class="activity-item"><div class="activity-val" id="a-certs">--</div><div class="activity-label">Governance</div></div>
+  </section>
+  <div class="activity-window">5-minute window</div>
+
+  <!-- Chain row -->
+  <section class="chain-row">
+    <div class="chain-item"><span class="chain-label">Fwd</span><span class="chain-val" id="c-fwd">--</span></div>
+    <div class="chain-item"><span class="chain-label">Back</span><span class="chain-val" id="c-back">--</span></div>
+    <div class="chain-item"><span class="chain-label">UTxO</span><span class="chain-val" id="c-utxo">--</span></div>
+    <div class="chain-item"><span class="chain-label">Sync</span><span class="chain-val" id="c-sync">--</span></div>
+  </section>
+
+  <!-- Footer -->
+  <div class="ft">
+    <p class="fm">Let It Run. Let It Resolve.</p>
+    <p>tsunagi.tech &middot; Independent Cardano infrastructure</p>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  var D = '\u2014';
+
+  function el(id) { return document.getElementById(id); }
+  function fmt(v) { return v != null ? Number(v).toLocaleString() : D; }
+  function age(s) {
+    if (s == null) return D;
+    s = Math.floor(s);
+    if (s < 60) return s + 's';
+    if (s < 3600) return Math.floor(s/60) + 'm ' + (s%60) + 's';
+    return Math.floor(s/3600) + 'h ' + Math.floor((s%3600)/60) + 'm';
+  }
+
+  function bandColor(b) {
+    if (b === 'GREEN') return 'var(--green)';
+    if (b === 'YELLOW') return 'var(--yellow)';
+    if (b === 'ORANGE') return 'var(--orange)';
+    if (b === 'RED') return 'var(--red)';
+    return 'var(--text-d)';
+  }
+
+  function bandBorder(b) {
+    if (b === 'GREEN') return '4px solid rgba(61,168,111,0.5)';
+    if (b === 'YELLOW') return '4px solid rgba(200,184,61,0.5)';
+    if (b === 'ORANGE') return '4px solid rgba(200,122,61,0.5)';
+    if (b === 'RED') return '4px solid rgba(168,61,61,0.5)';
+    return '4px solid var(--border)';
+  }
+
+  function pillStyle(b) {
+    var colors = {
+      GREEN: { c: 'var(--green)', bg: 'rgba(61,168,111,0.08)', br: 'rgba(61,168,111,0.25)' },
+      YELLOW: { c: 'var(--yellow)', bg: 'rgba(200,184,61,0.08)', br: 'rgba(200,184,61,0.25)' },
+      ORANGE: { c: 'var(--orange)', bg: 'rgba(200,122,61,0.08)', br: 'rgba(200,122,61,0.25)' },
+      RED: { c: 'var(--red)', bg: 'rgba(168,61,61,0.08)', br: 'rgba(168,61,61,0.25)' },
+    };
+    return colors[b] || colors.GREEN;
+  }
+
+  function updateStatus(d) {
+    el('h-slot').textContent = 'Slot ' + fmt(d.slot);
+    el('h-block').textContent = 'Block ' + fmt(d.block);
+    el('h-tip').textContent = d.tip_age_seconds != null ? 'Tip ' + age(d.tip_age_seconds) + ' ago' : D;
+    el('c-fwd').textContent = fmt(d.fwd);
+    el('c-back').textContent = fmt(d.back);
+    el('c-utxo').textContent = fmt(d.utxo);
+    var st = d.status || 'offline';
+    el('c-sync').textContent = st.charAt(0).toUpperCase() + st.slice(1);
+    if (!el('h-net').dataset.set) {
+      el('h-net').textContent = d.network || 'preview';
+      el('h-net').dataset.set = '1';
+    }
+  }
+
+  function updateNodeState(d) {
+    var bp = d.baey_policy || {};
+    var ins = (d.insight || {}).current || {};
+
+    // Hero score
+    var score = bp.health_score;
+    var band = bp.health_band || 'GREEN';
+    var state = bp.rt_state || 'HEALTHY';
+    var primary = bp.health_primary || 'nominal';
+
+    el('h-score').textContent = score != null ? score : D;
+    el('h-score').style.color = bandColor(band);
+    el('hero').style.borderLeft = bandBorder(band);
+
+    // Pill
+    var p = el('h-pill');
+    p.textContent = state;
+    var ps = pillStyle(band);
+    p.style.color = ps.c;
+    p.style.background = ps.bg;
+    p.style.borderColor = ps.br;
+
+    // Summary
+    var summary;
+    if (band === 'GREEN') summary = 'No anomalies detected';
+    else if (band === 'YELLOW') summary = 'Monitoring: ' + primary;
+    else summary = 'Alert: ' + primary;
+    el('h-summary').textContent = summary;
+
+    // Activity
+    el('a-blocks').textContent = ins.blocks != null ? fmt(ins.blocks) : D;
+    el('a-txs').textContent = ins.txs != null ? fmt(ins.txs) : D;
+    el('a-fees').textContent = ins.fees != null ? (ins.fees / 1000000).toFixed(2) + ' ADA' : D;
+    el('a-ada').textContent = ins.ada_moved != null && ins.ada_moved > 0 ? (ins.ada_moved / 1000000).toFixed(1) + ' ADA' : D;
+    el('a-scripts').textContent = ins.scripts != null ? fmt(ins.scripts) : D;
+    el('a-certs').textContent = ins.certs != null ? fmt(ins.certs) : D;
+
+    // Timestamp
+    el('h-updated').textContent = 'Live \u00B7 ' + new Date().toLocaleTimeString('en-US', {hour12:false});
+  }
+
+  function refresh() {
+    var x1 = new XMLHttpRequest();
+    x1.open('GET', '/data/status.json?t=' + Date.now(), true);
+    x1.timeout = 8000;
+    x1.onload = function() {
+      if (x1.status >= 200 && x1.status < 300) {
+        try { updateStatus(JSON.parse(x1.responseText)); } catch(e) {}
+      }
+    };
+    x1.send();
+
+    var x2 = new XMLHttpRequest();
+    x2.open('GET', '/data/node-state.json?t=' + Date.now(), true);
+    x2.timeout = 8000;
+    x2.onload = function() {
+      if (x2.status >= 200 && x2.status < 300) {
+        try { updateNodeState(JSON.parse(x2.responseText)); } catch(e) {}
+      }
+    };
+    x2.send();
+  }
+
+  refresh();
+  setInterval(refresh, 10000);
+})();
+</script>
+
+</body>
+</html>

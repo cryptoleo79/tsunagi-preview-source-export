@@ -1,0 +1,85 @@
+<script>
+function gFill(v) {
+  document.getElementById("g-input").value = v;
+}
+
+function render(html) {
+  document.getElementById("g-output").innerHTML = html;
+}
+
+async function runGuardian() {
+  const input = document.getElementById("g-input").value.toLowerCase();
+
+  let status = {};
+  let operator = {};
+
+  try {
+    status = await fetch("/data/status.json").then(r => r.json());
+    operator = await fetch("/data/operator.json").then(r => r.json());
+  } catch (e) {
+    render("<div class='g-out-unsupported'>Node unreachable</div>");
+    return;
+  }
+
+  const tipAge = status.tip_age_seconds ?? "—";
+  const sync = operator.sync?.status ?? "unknown";
+  const utxo = operator.ledger?.utxo_estimate ?? "—";
+  const block = status.block ?? "—";
+  const slot = status.slot ?? "—";
+
+  // --- INTENT HANDLING ---
+
+  if (input.includes("slow") || input.includes("遅い")) {
+    render(`<div class="g-out">
+      <div><b>Diagnosis:</b> Node latency</div>
+      <div>Tip age: ${tipAge}s</div>
+      <div>Sync: ${sync}</div>
+    </div>`);
+    return;
+  }
+
+  if (input.includes("status") || input.includes("状態")) {
+    render(`<div class="g-out">
+      <div><b>Status:</b> ${status.status}</div>
+      <div>Slot: ${slot}</div>
+      <div>Block: ${block}</div>
+    </div>`);
+    return;
+  }
+
+  if (input.includes("sync") || input.includes("同期")) {
+    render(`<div class="g-out">
+      <div><b>Sync state:</b> ${sync}</div>
+      <div>Tip age: ${tipAge}s</div>
+    </div>`);
+    return;
+  }
+
+  if (input.includes("utxo") || input.includes("ledger")) {
+    render(`<div class="g-out">
+      <div><b>UTxO estimate:</b> ${utxo}</div>
+    </div>`);
+    return;
+  }
+
+  if (input.includes("block") || input.includes("ブロック")) {
+    render(`<div class="g-out">
+      <div><b>Latest block:</b> ${block}</div>
+      <div>Slot: ${slot}</div>
+    </div>`);
+    return;
+  }
+
+  render("<div class='g-out-unsupported'>Try: status / sync / utxo / slow</div>");
+}
+
+// ENTER KEY SUPPORT
+document.addEventListener("DOMContentLoaded", () => {
+  const input = document.getElementById("g-input");
+  if (input) {
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") runGuardian();
+    });
+  }
+});
+</script>

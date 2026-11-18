@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TSUNAGI Architecture — Deterministic Cardano Node</title>
+<meta name="description" content="TSUNAGI architecture: runtime subsystems, block pipeline, observability layer, health engine, and producer readiness for deterministic Cardano infrastructure in Zig.">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #05080e;
+  --bg-surface: #0a0f1a;
+  --bg-card: rgba(12,18,30,0.65);
+  --bg-card-hl: rgba(14,22,38,0.75);
+  --border: rgba(80,120,180,0.10);
+  --border-hover: rgba(80,120,180,0.28);
+  --border-accent: rgba(80,140,220,0.35);
+  --text: #d0d6e2;
+  --text-m: #7a8598;
+  --text-d: #4c5668;
+  --accent: #3d6fa8;
+  --accent-l: #5a8ec8;
+  --white: #eceef3;
+  --green: #3da86f;
+  --green-bg: rgba(61,168,111,0.08);
+  --green-border: rgba(61,168,111,0.25);
+  --yellow: #a89b3d;
+  --yellow-bg: rgba(168,155,61,0.08);
+  --yellow-border: rgba(168,155,61,0.25);
+  --mono: 'SF Mono','Cascadia Code','Fira Code','Consolas',monospace;
+  --sans: -apple-system,BlinkMacSystemFont,'Segoe UI','Inter',Helvetica,Arial,sans-serif;
+}
+html { scroll-behavior: smooth; }
+body { font-family: var(--sans); background: var(--bg); color: var(--text); line-height: 1.7; overflow-x: hidden; }
+
+/* ── Utility Bar ── */
+.ub { position:fixed; top:0; left:0; right:0; z-index:100; height:48px; display:flex; align-items:center; justify-content:space-between; padding:0 28px; background:rgba(5,8,14,0.92); backdrop-filter:blur(14px); border-bottom:1px solid var(--border); }
+.ub-l { display:flex; align-items:center; gap:20px; }
+.ub-brand { font-size:0.82rem; font-weight:700; letter-spacing:0.14em; color:var(--white); text-decoration:none; }
+.ub-nav { display:flex; gap:6px; flex-wrap:wrap; }
+.ub-nav a { font-size:0.75rem; font-weight:500; letter-spacing:0.03em; color:var(--text-m); text-decoration:none; padding:5px 12px; border-radius:4px; border:1px solid transparent; transition:all 0.2s; }
+.ub-nav a:hover { color:var(--white); border-color:var(--border-accent); background:rgba(60,112,180,0.08); }
+.lang-switch { display:flex; align-items:center; gap:6px; margin-left:12px; font-size:0.75rem; white-space:nowrap; }
+.lang-switch a { text-decoration:none; color:var(--text-m); transition:color 0.2s ease; }
+.lang-switch a:hover { color:var(--text); }
+.lang-cur { color:var(--accent-l) !important; font-weight:600; }
+.lang-div { opacity:0.4; }
+
+/* ── Page ── */
+.pg { max-width:860px; margin:0 auto; padding:80px 28px 60px; }
+
+/* ── Title Block ── */
+.tb { text-align:center; padding:48px 0 20px; margin-bottom:36px; }
+.tb h1 { font-size:2rem; font-weight:700; color:var(--white); letter-spacing:0.06em; margin-bottom:10px; }
+.tb .st { font-size:0.95rem; color:var(--text-m); }
+
+/* ── Sections ── */
+.section-label { font-family:var(--mono); font-size:0.62rem; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; color:var(--text-d); margin:48px 0 12px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+.section-label:first-of-type { margin-top:0; }
+
+.content p { font-size:0.95rem; color:var(--text); line-height:1.85; margin-bottom:18px; }
+.content p.muted { color:var(--text-m); }
+
+/* ── Architecture Stack ── */
+.arch-stack { display:flex; flex-direction:column; gap:0; margin:28px 0 8px; }
+
+.layer { background:var(--bg-card); border:1px solid var(--border); border-bottom:none; padding:24px 28px; position:relative; overflow:hidden; transition:border-color 0.25s, background 0.25s; }
+.layer:first-child { border-radius:10px 10px 0 0; }
+.layer:last-child { border-bottom:1px solid var(--border); border-radius:0 0 10px 10px; }
+.layer:hover { border-color:var(--border-hover); background:var(--bg-card-hl); z-index:1; }
+
+.layer::before { content:''; position:absolute; top:0; left:0; bottom:0; width:3px; background:linear-gradient(180deg, var(--accent-l), var(--accent)); opacity:0; transition:opacity 0.25s; }
+.layer:hover::before { opacity:1; }
+
+.layer-header { display:flex; align-items:baseline; gap:14px; margin-bottom:8px; flex-wrap:wrap; }
+.layer-name { font-family:var(--mono); font-size:1.05rem; font-weight:700; color:var(--white); letter-spacing:0.04em; }
+.layer-role { font-family:var(--mono); font-size:0.68rem; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; color:var(--accent-l); }
+.layer-desc { font-size:0.88rem; color:var(--text-m); line-height:1.75; }
+
+/* ── Flow Grid ── */
+.flow-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin:24px 0; }
+.flow-card { background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:20px 22px; transition:border-color 0.25s; position:relative; overflow:hidden; }
+.flow-card:hover { border-color:var(--border-hover); }
+.flow-card::after { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,var(--accent),transparent); opacity:0; transition:opacity 0.25s; }
+.flow-card:hover::after { opacity:0.6; }
+.flow-card-label { font-family:var(--mono); font-size:0.6rem; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--accent-l); margin-bottom:8px; }
+.flow-card-title { font-size:0.95rem; font-weight:600; color:var(--white); margin-bottom:8px; }
+.flow-card-text { font-size:0.82rem; color:var(--text-m); line-height:1.7; }
+
+/* ── Diagram Block ── */
+.diagram { background:var(--bg-surface); border:1px solid var(--border); border-radius:8px; padding:24px 28px; margin:24px 0; overflow-x:auto; transition:border-color 0.3s; }
+.diagram:hover { border-color:var(--border-hover); }
+.diagram pre { font-family:var(--mono); font-size:0.75rem; color:var(--text-m); line-height:1.8; margin:0; white-space:pre; }
+.diagram-cap { font-family:var(--mono); font-size:0.62rem; color:var(--text-d); margin-top:14px; letter-spacing:0.02em; }
+
+/* ── Info Table ── */
+.info-table { width:100%; border-collapse:collapse; margin:20px 0; }
+.info-table th { font-family:var(--mono); font-size:0.6rem; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-d); text-align:left; padding:10px 16px; border-bottom:1px solid var(--border); }
+.info-table td { font-size:0.85rem; padding:10px 16px; border-bottom:1px solid rgba(80,120,180,0.06); vertical-align:top; }
+.info-table td:first-child { font-family:var(--mono); font-weight:600; color:var(--white); white-space:nowrap; }
+.info-table td:last-child { color:var(--text-m); }
+.info-table tr:last-child td { border-bottom:none; }
+
+/* ── Arch Note ── */
+.arch-note { background:var(--bg-card); border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:0 8px 8px 0; padding:28px 28px; margin:28px 0; transition:border-color 0.3s; }
+.arch-note:hover { border-color:var(--border-hover); border-left-color:var(--accent-l); }
+.arch-note-title { font-family:var(--mono); font-size:0.82rem; font-weight:700; color:var(--white); letter-spacing:0.04em; margin-bottom:14px; }
+.arch-note p { font-size:0.88rem; color:var(--text-m); line-height:1.8; margin-bottom:12px; }
+.arch-note p:last-child { margin-bottom:0; }
+
+/* ── Boundary Badge ── */
+.boundary-badge { display:inline-block; font-family:var(--mono); font-size:0.58rem; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; padding:3px 10px; border-radius:4px; margin-right:8px; }
+.badge-live { color:var(--green); background:var(--green-bg); border:1px solid var(--green-border); }
+.badge-offline { color:var(--yellow); background:var(--yellow-bg); border:1px solid var(--yellow-border); }
+
+/* ── Footer ── */
+.ft { text-align:center; padding:40px 0 32px; border-top:1px solid var(--border); margin-top:48px; }
+.ft p { font-size:0.78rem; color:var(--text-d); text-align:center; letter-spacing:0.03em; }
+.ft .fm { font-size:0.88rem; color:var(--text-m); font-weight:600; margin-bottom:8px; }
+
+/* ── Responsive ── */
+@media(max-width:768px){
+  .pg { padding:70px 18px 40px; }
+  .tb h1 { font-size:1.6rem; }
+  .layer { padding:20px 20px; }
+  .arch-note { padding:22px 20px; }
+  .layer-name { font-size:0.95rem; }
+  .flow-grid { grid-template-columns:1fr; }
+  .ub { padding:0 16px; }
+  .ub-nav { gap:2px; }
+  .ub-nav a { padding:5px 8px; font-size:0.7rem; }
+  .diagram { padding:18px 16px; }
+  .diagram pre { font-size:0.68rem; }
+}
+@media(max-width:480px){
+  .pg { padding:64px 14px 32px; }
+  .tb h1 { font-size:1.35rem; }
+  .ub-brand { font-size:0.75rem; }
+  .layer { padding:16px 16px; }
+  .arch-note { padding:18px 16px; }
+  .layer-header { gap:8px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Utility Bar (shared) -->
+<div id="nav-container"></div>
+<script src="/assets/nav.js"></script>
+
+<div class="pg">
+
+  <!-- Title Block -->
+  <div class="tb">
+    <h1>TSUNAGI Architecture</h1>
+    <p class="st">Deterministic Cardano node infrastructure in Zig</p>
+  </div>
+
+  <!-- Intro -->
+  <div class="content">
+    <p>
+      TSUNAGI is an independent Cardano node written in Zig 0.13.0. It compiles to a single
+      static binary with three external dependencies: Zig, LMDB, and libsodium. The architecture
+      separates concerns into distinct runtime subsystems connected through structured callbacks
+      and bounded in-memory stores.
+    </p>
+    <p class="muted">
+      This page describes the real implemented system as it exists today, including what is
+      built, what is offline-only, and what is not yet implemented.
+    </p>
+  </div>
+
+  <!-- System Overview Diagram -->
+  <div class="diagram">
+    <pre>
+  Cardano Network (relay peers)
+        |
+        v
+  ┌─────────────────────────────────────────────────┐
+  │  Ouroboros Protocol Engine                       │
+  │  ChainSync / BlockFetch / TxSubmission           │
+  │  KeepAlive / Mini-Protocol Multiplexer           │
+  └────────────────────┬────────────────────────────┘
+                       |
+                       v
+  ┌─────────────────────────────────────────────────┐
+  │  Block Processing Pipeline                       │
+  │  CBOR decode → tx decode → delta extraction      │
+  │  shadow verification → state application         │
+  └────────┬───────────┬───────────┬────────────────┘
+           |           |           |
+           v           v           v
+  ┌────────────┐ ┌───────────┐ ┌───────────────────┐
+  │ LMDB Store │ │ Journals  │ │ Observability     │
+  │ UTxO set   │ │ (ndjson)  │ │ Stores            │
+  │ undo log   │ │ 4 files   │ │ (ring buffers)    │
+  │ coverage   │ │ append    │ │ bounded, in-mem   │
+  └────────────┘ └─────┬─────┘ └─────────┬─────────┘
+                       |                 |
+                       v                 v
+              ┌──────────────────────────────────┐
+              │ JSON Generation Layer             │
+              │ 11 shell scripts                  │
+              │ jq-first / sed-fallback           │
+              └──────────────┬───────────────────┘
+                             |
+                             v
+              ┌──────────────────────────────────┐
+              │ Web Surfaces                      │
+              │ operator / explorer / status      │
+              │ labs / decode / network           │
+              └──────────────────────────────────┘</pre>
+    <div class="diagram-cap">Figure 1 &mdash; TSUNAGI system overview showing data flow from network peers through the block pipeline to persistence, journals, observability stores, JSON generation, and web surfaces.</div>
+  </div>
+
+  <!-- Runtime Core -->
+  <div class="section-label">Runtime Core</div>
+
+  <div class="arch-stack">
+    <div class="layer">
+      <div class="layer-header">
+        <span class="layer-name">Ouroboros Protocol Engine</span>
+        <span class="layer-role">Network</span>
+      </div>
+      <div class="layer-desc">
+        Full Ouroboros NodeToNode protocol implementation. ChainSync for header tracking,
+        BlockFetch for block retrieval, TxSubmission for mempool interaction, and KeepAlive
+        for connection liveness. A mini-protocol multiplexer manages concurrent protocol
+        sessions over a single TCP connection.
+      </div>
+    </div>
+
+    <div class="layer">
+      <div class="layer-header">
+        <span class="layer-name">Block Processing Pipeline</span>
+        <span class="layer-role">Decode + Extract</span>
+      </div>
+      <div class="layer-desc">
+        Each block passes through a deterministic pipeline: CBOR decode, per-transaction
+        summary extraction (inputs, outputs, fee, metadata), UTxO delta computation
+        (consumed/produced/net), and state application. A shadow ledger path processes
+        every block independently to verify parity with the primary path. Divergence
+        is detected within one block.
+      </div>
+    </div>
+
+    <div class="layer">
+      <div class="layer-header">
+        <span class="layer-name">LMDB Persistent Storage</span>
+        <span class="layer-role">Persistence</span>
+      </div>
+      <div class="layer-desc">
+        Transactional persistent storage with atomic writes. LMDB holds the UTxO set,
+        undo history, and coverage state. Three persistence modes: memory-only for speed,
+        LMDB-native for progressive convergence, LMDB-truth for full verified persistence.
+        Snapshot bootstrap via TSF2 format with Blake2b-256 digest and Ed25519 signature.
+      </div>
+    </div>
+
+    <div class="layer">
+      <div class="layer-header">
+        <span class="layer-name">Cursor Persistence</span>
+        <span class="layer-role">Chain Tip State</span>
+      </div>
+      <div class="layer-desc">
+        The chain tip (slot, block number, tip hash) is persisted to cursor.json after
+        every block. On restart the node resumes from the persisted cursor. The cursor
+        file is the authoritative record of sync progress.
+      </div>
+    </div>
+  </div>
+
+  <!-- Observability Layer -->
+  <div class="section-label">Observability Layer</div>
+
+  <div class="content">
+    <p>
+      TSUNAGI observability is passive. The runtime records events to bounded in-memory stores
+      and append-only journal files. Shell scripts extract journal data into JSON endpoints.
+      Web pages poll those endpoints. No observability component modifies runtime behavior.
+    </p>
+  </div>
+
+  <div class="flow-grid">
+    <div class="flow-card">
+      <div class="flow-card-label">Journals</div>
+      <div class="flow-card-title">Append-Only Event Logs</div>
+      <div class="flow-card-text">
+        4 journal files in NDJSON format: journal.ndjson (roll_forward, roll_backward, tx_decode),
+        mempool.ndjson (mempool_tx), slot_observatory.ndjson (slot_observation),
+        peer_observatory.ndjson (peer_event). Plus confirmation.ndjson for confirmed transactions.
+      </div>
+    </div>
+    <div class="flow-card">
+      <div class="flow-card-label">Stores</div>
+      <div class="flow-card-title">Bounded Ring Buffers</div>
+      <div class="flow-card-text">
+        Fixed-capacity in-memory stores with no dynamic allocation. DeltaHistory (200 blocks),
+        BlockDecodeStore (100), TxSummaryHistory (50), MempoolSummaryStore (128),
+        SlotObservatory (512), PeerObservatory (512), ConfirmationTracker (256+256).
+      </div>
+    </div>
+    <div class="flow-card">
+      <div class="flow-card-label">Block Pipeline</div>
+      <div class="flow-card-title">Mempool Observatory</div>
+      <div class="flow-card-text">
+        Transactions submitted through the local TxSubmission path are decoded at submission
+        time: inputs, outputs, fee, metadata, canonical txid. Summaries are recorded to the
+        mempool journal and ring buffer without blocking submission.
+      </div>
+    </div>
+    <div class="flow-card">
+      <div class="flow-card-label">Correlation</div>
+      <div class="flow-card-title">Confirmation Tracking</div>
+      <div class="flow-card-text">
+        Locally submitted transactions are correlated with block inclusion using exact txid
+        matching (blake2b256 of CBOR tx body). The confirmation tracker records submission time,
+        confirmation time, and the confirming block. Bounded and local-only.
+      </div>
+    </div>
+    <div class="flow-card">
+      <div class="flow-card-label">Consensus</div>
+      <div class="flow-card-title">Slot Observatory</div>
+      <div class="flow-card-text">
+        Records block arrival rhythm across the chain timeline. Each observation captures the
+        inter-block gap (empty slots between consecutive blocks). Passive recording &mdash;
+        no influence on consensus.
+      </div>
+    </div>
+    <div class="flow-card">
+      <div class="flow-card-label">Network</div>
+      <div class="flow-card-title">Peer Observatory</div>
+      <div class="flow-card-text">
+        Captures peer connect/disconnect events at the transport boundary and block arrival events.
+        Only events that the runtime can truthfully attribute are recorded. The TxSubmission protocol
+        is pull-based, so inbound peer transactions are not observable.
+      </div>
+    </div>
+  </div>
+
+  <!-- JSON / Web Surface -->
+  <div class="section-label">JSON Generation &amp; Web Surface</div>
+
+  <div class="content">
+    <p>
+      The runtime produces journals and in-memory stores. Shell scripts read these sources
+      and generate static JSON files. Web pages fetch the JSON on a 10-second polling interval.
+      This separation means the web layer has zero coupling to the Zig runtime.
+    </p>
+  </div>
+
+  <table class="info-table">
+    <thead>
+      <tr><th>JSON Endpoint</th><th>Source</th><th>Web Consumer</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>operator.json</td><td>cursor.json, journal.ndjson</td><td>Operator dashboard</td></tr>
+      <tr><td>status.json</td><td>cursor.json, journal.ndjson</td><td>Status page</td></tr>
+      <tr><td>blocks.json</td><td>journal.ndjson, tx_decode.ndjson</td><td>Explorer</td></tr>
+      <tr><td>delta.json</td><td>journal.ndjson</td><td>Explorer</td></tr>
+      <tr><td>decode.json</td><td>tx_decode.ndjson</td><td>Decode page</td></tr>
+      <tr><td>network.json</td><td>peer_observatory.ndjson</td><td>Network page, Operator</td></tr>
+      <tr><td>slot-observatory.json</td><td>slot_observatory.ndjson</td><td>Slot page, Operator</td></tr>
+      <tr><td>mempool.json</td><td>mempool.ndjson</td><td>Mempool page, Operator</td></tr>
+      <tr><td>confirmation.json</td><td>confirmation.ndjson, mempool.ndjson</td><td>Confirmation page, Operator</td></tr>
+      <tr><td>health.json</td><td>operator.json, network.json, etc.</td><td>Operator dashboard</td></tr>
+      <tr><td>producer-status.json</td><td>producer-bridge CLI</td><td>Operator dashboard</td></tr>
+    </tbody>
+  </table>
+
+  <!-- Health Engine -->
+  <div class="section-label">Health Engine</div>
+
+  <div class="content">
+    <p>
+      A composite health score aggregates five independently scored components into a single
+      0&ndash;100 value. All arithmetic is integer-only with no floating point. The score
+      classifies the node as excellent (&ge;90), healthy (&ge;75), degraded (&ge;60),
+      or critical (&lt;60).
+    </p>
+  </div>
+
+  <table class="info-table">
+    <thead>
+      <tr><th>Component</th><th>Weight</th><th>Signal</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Peer</td><td>25%</td><td>Disconnect/connect ratio from peer observatory</td></tr>
+      <tr><td>Slot</td><td>20%</td><td>Average inter-block gap from slot observatory</td></tr>
+      <tr><td>Block</td><td>25%</td><td>Rollback rate from block pipeline counters</td></tr>
+      <tr><td>Confirm</td><td>15%</td><td>Average confirmation time for locally submitted txs</td></tr>
+      <tr><td>Mempool</td><td>15%</td><td>Pending transaction count from mempool tracker</td></tr>
+    </tbody>
+  </table>
+
+  <div class="arch-note">
+    <div class="arch-note-title">Health Score Design</div>
+    <p>Missing components receive a neutral score of 80, so the health engine degrades gracefully
+    when observability data is unavailable. The Zig runtime computes health inline; a shell
+    mirror script (generate-health-json.sh) produces the same score from the same inputs for
+    the web layer.</p>
+  </div>
+
+  <!-- Block Pipeline Diagram -->
+  <div class="section-label">Block Pipeline Detail</div>
+
+  <div class="diagram">
+    <pre>
+  Block Body (CBOR bytes)
+        |
+        v
+  ┌─────────────────────┐     ┌─────────────────────┐
+  │ Transaction Decode   │     │ Shadow Ledger Path   │
+  │ inputs, outputs,     │     │ independent decode   │
+  │ fee, metadata        │     │ parity verification  │
+  └──────────┬──────────┘     └──────────┬──────────┘
+             |                           |
+             v                           v
+  ┌─────────────────────┐     ┌─────────────────────┐
+  │ Delta Extraction     │     │ Shadow Delta Check   │
+  │ consumed / produced  │     │ must match primary   │
+  │ net UTxO change      │     │ divergence = error   │
+  └──────────┬──────────┘     └─────────────────────┘
+             |
+     ┌───────┼───────┬──────────────┐
+     |       |       |              |
+     v       v       v              v
+  LMDB   journal  delta_history  tx_summary
+  state   .ndjson  ring buffer   ring buffer
+  apply   append   (cap 200)     (cap 50)</pre>
+    <div class="diagram-cap">Figure 2 &mdash; Block pipeline showing primary and shadow paths, delta extraction, and output sinks.</div>
+  </div>
+
+  <!-- Producer Readiness -->
+  <div class="section-label">Producer Readiness</div>
+
+  <div class="content">
+    <p>
+      TSUNAGI includes an offline producer readiness harness. This evaluates whether the node
+      would be elected leader for a given slot and assembles a local candidate block, but
+      never broadcasts it. The producer path is entirely offline and local.
+    </p>
+  </div>
+
+  <div class="arch-stack">
+    <div class="layer">
+      <div class="layer-header">
+        <span class="layer-name">Producer Readiness Harness</span>
+        <span class="layer-role">Evaluation</span>
+      </div>
+      <div class="layer-desc">
+        Standalone module that evaluates Praos leadership eligibility using E34 fixed-point
+        threshold arithmetic. Checks VRF output against stake-weighted threshold, validates
+        KES key period and expiration, performs Sum6Kes sign + verify round trip, and assembles
+        a local candidate block (header + empty body in CBOR).
+        State contract: READY / NOT_LEADER / NOT_READY.
+      </div>
+    </div>
+
+    <div class="layer">
+      <div class="layer-header">
+        <span class="layer-name">Producer Bridge</span>
+        <span class="layer-role">Runtime Integration</span>
+      </div>
+      <div class="layer-desc">
+        Maps runtime-shaped inputs (cursor slot, genesis config, ENV-loaded VRF/KES/stake material)
+        to the readiness evaluation module. Pure computation with no file IO, no network IO, no
+        broadcast. CLI command reads cursor.json and environment variables, computes epoch/KES period,
+        and produces a JSON status report.
+      </div>
+    </div>
+
+    <div class="layer">
+      <div class="layer-header">
+        <span class="layer-name">Artifact Bundle</span>
+        <span class="layer-role">Offline Output</span>
+      </div>
+      <div class="layer-desc">
+        When the readiness evaluation returns READY, the harness can optionally write 5 artifact
+        files to disk: candidate header CBOR, candidate body CBOR, full assembled block CBOR,
+        hash manifest, and the readiness report JSON. These artifacts are written to a local
+        directory and are never transmitted.
+      </div>
+    </div>
+  </div>
+
+  <!-- Producer Flow Diagram -->
+  <div class="diagram">
+    <pre>
+  cursor.json ──┐
+  genesis.json ─┤
+  ENV vars ─────┤
+  (VRF, KES,    │
+   stake, pool) │
+                v
+  ┌──────────────────────────────┐
+  │ Producer Bridge              │
+  │ compute epoch, KES period    │
+  │ build BridgeInputs           │
+  └──────────────┬───────────────┘
+                 |
+                 v
+  ┌──────────────────────────────┐
+  │ Readiness Evaluation         │
+  │ VRF threshold check          │
+  │ KES validity check           │
+  │ sign + verify round trip     │
+  │ candidate block assembly     │
+  └──────────────┬───────────────┘
+                 |
+        ┌────────┴────────┐
+        v                 v
+  NOT_LEADER          READY
+  (exit, report)      |
+                      v
+              ┌──────────────┐
+              │ Artifact      │
+              │ Bundle (opt)  │
+              │ 5 files       │
+              │ to local disk │
+              └──────────────┘</pre>
+    <div class="diagram-cap">Figure 3 &mdash; Producer readiness evaluation flow. All paths are offline. No network broadcast occurs.</div>
+  </div>
+
+  <!-- Current Boundaries -->
+  <div class="section-label">Current Boundaries</div>
+
+  <div class="content">
+    <p>
+      TSUNAGI is a working follower node with full observability and an execution-aware forge pipeline
+      proven on the preview network. The following table shows what is implemented and what is not.
+    </p>
+  </div>
+
+  <table class="info-table">
+    <thead>
+      <tr><th>Capability</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>ChainSync / BlockFetch</td><td><span class="boundary-badge badge-live">Live</span> Full Ouroboros protocol</td></tr>
+      <tr><td>TxSubmission</td><td><span class="boundary-badge badge-live">Live</span> Local mempool submission path</td></tr>
+      <tr><td>Block decode + delta extraction</td><td><span class="boundary-badge badge-live">Live</span> Deterministic pipeline</td></tr>
+      <tr><td>LMDB UTxO persistence</td><td><span class="boundary-badge badge-live">Live</span> Three modes, snapshot bootstrap</td></tr>
+      <tr><td>Shadow ledger verification</td><td><span class="boundary-badge badge-live">Live</span> Per-block parity check</td></tr>
+      <tr><td>Journals + JSON + web dashboards</td><td><span class="boundary-badge badge-live">Live</span> Full observability pipeline</td></tr>
+      <tr><td>Health engine</td><td><span class="boundary-badge badge-live">Live</span> 5-component weighted scoring</td></tr>
+      <tr><td>Mempool validation (13-check)</td><td><span class="boundary-badge badge-live">Live</span> Structural, balance, fee, witness, native script, Plutus boundary</td></tr>
+      <tr><td>Forge gate + ranking</td><td><span class="boundary-badge badge-live">Live</span> Execution-aware candidate evaluation, deterministic scoring</td></tr>
+      <tr><td>Forge candidate construction</td><td><span class="boundary-badge badge-live">Live</span> Real KES-signed block candidates with embedded transactions (preview)</td></tr>
+      <tr><td>Deterministic candidate reordering</td><td><span class="boundary-badge badge-live">Live</span> Opt-in, policy-gated, mixed-score changed=1 proven on preview</td></tr>
+      <tr><td>Trust signals + aggregate evidence</td><td><span class="boundary-badge badge-live">Live</span> Multi-source (forge + mempool), normalized aggregate output</td></tr>
+      <tr><td>Trust score + decision metrics</td><td><span class="boundary-badge badge-live">Live</span> Observe-only BAeY / EV / Kelly / LLR from live evidence (preview)</td></tr>
+      <tr><td>Decision advisory</td><td><span class="boundary-badge badge-live">Live</span> Observe-only stance, confidence, allocation from live metrics (preview)</td></tr>
+      <tr><td>Shadow policy preview</td><td><span class="boundary-badge badge-live">Live</span> Shadow-only recommendation + strength from advisory (preview)</td></tr>
+      <tr><td>Shadow policy impact</td><td><span class="boundary-badge badge-live">Live</span> Shadow-only domain simulation: ordering/enforcement touch (preview)</td></tr>
+      <tr><td>Policy-coupled ordering</td><td><span class="boundary-badge badge-live">Live</span> Preview-only, operator-enabled ordering activation from policy impact (preview)</td></tr>
+      <tr><td>/decision operator surface</td><td><span class="boundary-badge badge-live">Live</span> Full decision stack in one HTTP endpoint (preview)</td></tr>
+      <tr><td>External evaluator boundary</td><td><span class="boundary-badge badge-live">Live</span> Protocol v1, known-case fingerprint matching, rule-based fallback</td></tr>
+      <tr><td>Slot + peer observatories</td><td><span class="boundary-badge badge-live">Live</span> Passive recording</td></tr>
+      <tr><td>Full Plutus/UPLC execution</td><td>Not yet implemented (rule-based + known-case boundary only)</td></tr>
+      <tr><td>General adaptive policy</td><td>Not yet implemented (coupling is preview-only experiment, ordering-only)</td></tr>
+      <tr><td>Network block broadcast</td><td>Not yet implemented (candidates constructed but not broadcast)</td></tr>
+      <tr><td>Mainnet block production</td><td>Not yet implemented</td></tr>
+    </tbody>
+  </table>
+
+  <div class="arch-note">
+    <div class="arch-note-title">Proven on Preview, Not Yet Broadcasting</div>
+    <p>TSUNAGI constructs real KES-signed block candidates with embedded transactions on the
+    preview network. The full forge evidence pipeline &mdash; gate evaluation, deterministic
+    ranking, external boundary checking, trust-signal emission, and candidate
+    reordering &mdash; has been validated under accepted-transaction load with a real relay connected.
+    Mixed-score candidate reordering has been proven with visible changed=1 evidence
+    using size-aware differentiation for accepted non-Plutus transactions.
+    Observe-only trust scoring, BAeY / EV / Kelly / LLR decision metrics, a
+    deterministic decision advisory (stance, confidence, allocation), a shadow
+    policy preview (recommendation, strength), and a shadow policy impact simulation
+    (ordering/enforcement domain touch) are derived from live evidence during each
+    forge cycle. A preview-only policy-coupled ordering experiment has been proven:
+    shadow policy output activated the reorder path while forge policy was observe,
+    demonstrating explicit operator-enabled policy coupling.
+    Block candidates are not yet broadcast to the network. Policy coupling is
+    preview-only and ordering-only. General adaptive policy, full Plutus execution,
+    and consensus-equivalent parity are not yet implemented.</p>
+  </div>
+
+  <!-- Design Principles -->
+  <div class="section-label">Design Principles</div>
+
+  <div class="flow-grid">
+    <div class="flow-card">
+      <div class="flow-card-label">Core</div>
+      <div class="flow-card-title">Determinism</div>
+      <div class="flow-card-text">
+        Identical inputs produce identical outputs at every stage. The ledger pipeline,
+        delta extraction, and block decode are fully deterministic. No stage introduces
+        randomness or non-reproducible behavior.
+      </div>
+    </div>
+    <div class="flow-card">
+      <div class="flow-card-label">Memory</div>
+      <div class="flow-card-title">Bounded Storage</div>
+      <div class="flow-card-text">
+        All in-memory observability stores use fixed-capacity ring buffers with no dynamic
+        allocation. Capacities are compile-time constants. The node's memory footprint
+        does not grow with chain length or runtime duration.
+      </div>
+    </div>
+    <div class="flow-card">
+      <div class="flow-card-label">Observability</div>
+      <div class="flow-card-title">Passive Recording</div>
+      <div class="flow-card-text">
+        Observability is read-only. Journals append, stores record, JSON scripts extract.
+        Nothing in the observability layer modifies block processing, ledger state,
+        or protocol behavior.
+      </div>
+    </div>
+    <div class="flow-card">
+      <div class="flow-card-label">Dependencies</div>
+      <div class="flow-card-title">Minimal Stack</div>
+      <div class="flow-card-text">
+        Zig 0.13.0, LMDB, and libsodium. No framework, no package manager, no build system
+        beyond Zig's built-in. Single static binary output. Shell scripts use only
+        standard POSIX utilities plus optional jq.
+      </div>
+    </div>
+  </div>
+
+  <!-- Design Lineage -->
+  <div class="section-label">Design Lineage</div>
+
+  <div class="arch-note">
+    <div class="arch-note-title">Conceptual Layer Model</div>
+    <p>The current subsystem architecture grew from an earlier conceptual model that
+    organized the system as named layers, each with a specific operational role:
+    KAGAMI (diagnostics), YAMORI (guardian monitoring), TATE (fragment defense),
+    KURA (stabilization), and TSURUGI (protocol engine). These names originate
+    from Japanese functional metaphors and reflect the project's design lineage.</p>
+    <p>The conceptual model shaped the architectural separation of concerns that the
+    current implementation inherits. The named layers remain part of the project's
+    design vocabulary and are described in full in
+    the <a href="/manifesto/" style="color:var(--accent-l);text-decoration:none;border-bottom:1px solid rgba(90,142,200,0.3);">manifesto</a>.
+    The architecture page documents the system as built.</p>
+  </div>
+
+  <!-- Footer -->
+  <div class="ft">
+    <p class="fm">Let It Run. Let It Resolve.</p>
+    <p>tsunagi.tech &middot; Independent Cardano infrastructure research</p>
+  </div>
+
+</div>
+
+</body>
+</html>

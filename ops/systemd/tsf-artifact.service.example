@@ -1,0 +1,25 @@
+[Unit]
+Description=Tsunagi TSF Artifact Export (nightly)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/src/tsunagi-follower/tsunagi-node
+
+Environment=TSUNAGI_HOME=%h/tsunagi-home-mainnet
+Environment=TSUNAGI_LMDB=%h/tsunagi-home-mainnet/lmdb
+
+# Output files
+Environment=TSF_DIR=%h/tsunagi-home-mainnet/tsf
+Environment=KEEP_LAST=7
+
+ExecStart=/usr/bin/env bash -lc '\
+  set -euo pipefail; \
+  mkdir -p "$TSF_DIR"; \
+  TSF_OUT="$TSF_DIR/mainnet-$(date +%%Y%%m%%d-%%H%%M%%S).tsf"; \
+  ./zig-out/bin/tsunagi-node tsf-artifact --lmdb "$TSUNAGI_LMDB" --out "$TSF_OUT" --test-dir /tmp/tsunagi-lmdb-test --gzip --strict; \
+  ls -1t "$TSF_DIR"/*.tsf 2>/dev/null | tail -n +$((KEEP_LAST+1)) | xargs -r rm -f; \
+  ls -1t "$TSF_DIR"/*.tsf.gz 2>/dev/null | tail -n +$((KEEP_LAST+1)) | xargs -r rm -f; \
+  echo "tsf-artifact: wrote $TSF_OUT" \
+'

@@ -1,0 +1,705 @@
+const std = @import("std");
+const compat = @import("compat");
+
+// Recursion depth guard to prevent stack-overflow DoS via nested CBOR bombs.
+pub const MAX_CBOR_DEPTH: u16 = 256;
+
+pub const MapEntry = struct { key: u64, value: Term };
+
+pub const Term = union(enum) {
+    u64: u64,
+    i64: i64,
+    bool: bool,
+    null: void,
+    bytes: []const u8,
+    text: []const u8,
+    array: []Term,
+    map_u64: []MapEntry,
+    tag: struct { tag: u64, value: *Term },
+};
+
+pub fn encode(term: Term, writer: anytype) !void {
+    switch (term) {
+        .u64 => |v| try encodeUnsigned(v, writer),
+        .i64 => |v| {
+            if (v < 0) {
+                const n: u64 = @intCast(@as(i128, -1) - @as(i128, v));
+                try encodeTypeAndLen(1, n, writer);
+            } else {
+                try encodeUnsigned(@intCast(v), writer);
+            }
+        },
+        .bool => |v| try writer.writeByte(if (v) 0xF5 else 0xF4),
+        .null => try writer.writeByte(0xF6),
+        .bytes => |b| {
+            try encodeTypeAndLen(2, b.len, writer);
+            try writer.writeAll(b);
+        },
+        .text => |t| {
+            try encodeTypeAndLen(3, t.len, writer);
+            try writer.writeAll(t);
+        },
+        .array => |items| {
+            try encodeTypeAndLen(4, items.len, writer);
+            for (items) |item| try encode(item, writer);
+        },
+        .map_u64 => |entries| {
+            try encodeTypeAndLen(5, entries.len, writer);
+            for (entries) |e| {
+                try encodeUnsigned(e.key, writer);
+                try encode(e.value, writer);
+            }
+        },
+        .tag => |t| {
+            try encodeTypeAndLen(6, t.tag, writer);
+            try encode(t.value.*, writer);
+        },
+    }
+}
+
+pub fn decode(alloc: std.mem.Allocator, reader: anytype) !Term {
+    return decodeTerm(alloc, reader);
+}
+
+pub fn decodeOrRaw(alloc: std.mem.Allocator, bytes: []const u8) anyerror!Term {
+    if (bytes.len == 0) return error.EndOfStream;
+    var fbs = compat.fixedBufferStream(bytes);
+    const reader = fbs.reader();
+    const term = decode(alloc, reader) catch |err| {
+        if (err == error.UnsupportedCborType or err == error.UnsupportedTerm) {
+            const raw = try alloc.dupe(u8, bytes);
+            return Term{ .bytes = raw };
+        }
+        return err;
+    };
+    return term;
+}
+
+pub fn free(term: Term, alloc: std.mem.Allocator) void {
+    switch (term) {
+        .u64 => {},
+        .i64 => {},
+        .bool => {},
+        .null => {},
+        .bytes => |b| alloc.free(b),
+        .text => |t| alloc.free(t),
+        .array => |items| {
+            for (items) |item| free(item, alloc);
+            alloc.free(items);
+        },
+        .map_u64 => |entries| {
+            for (entries) |e| free(e.value, alloc);
+            alloc.free(entries);
+        },
+        .tag => |t| {
+            free(t.value.*, alloc);
+            alloc.destroy(t.value);
+        },
+    }
+}
+
+fn encodeUnsigned(v: u64, writer: anytype) !void {
+    try encodeTypeAndLen(0, v, writer);
+}
+
+fn encodeTypeAndLen(major: u8, len: u64, writer: anytype) !void {
+    if (len <= 23) {
+        try writer.writeByte(@as(u8, (major << 5) | @as(u8, @intCast(len))));
+        return;
+    }
+    if (len <= 0xff) {
+        try writer.writeByte(@as(u8, (major << 5) | 24));
+        try writer.writeByte(@as(u8, @intCast(len)));
+        return;
+    }
+    if (len <= 0xffff) {
+        try writer.writeByte(@as(u8, (major << 5) | 25));
+        var buf: [2]u8 = undefined;
+        std.mem.writeInt(u16, &buf, @as(u16, @intCast(len)), .big);
+        try writer.writeAll(&buf);
+        return;
+    }
+    if (len <= 0xffff_ffff) {
+        try writer.writeByte(@as(u8, (major << 5) | 26));
+        var buf: [4]u8 = undefined;
+        std.mem.writeInt(u32, &buf, @as(u32, @intCast(len)), .big);
+        try writer.writeAll(&buf);
+        return;
+    }
+    try writer.writeByte(@as(u8, (major << 5) | 27));
+    var buf: [8]u8 = undefined;
+    std.mem.writeInt(u64, &buf, len, .big);
+    try writer.writeAll(&buf);
+}
+
+// Hard limits to prevent oversized CBOR from causing arena overflow
+const MAX_CBOR_BYTES: usize = 16 * 1024 * 1024; // 16 MB max for any single bytes/text field
+const MAX_CBOR_ITEMS: usize = 2_000_000; // max array/map element count
+
+fn decodeTermFromInitial(alloc: std.mem.Allocator, reader: anytype, initial: u8) anyerror!Term {
+    return decodeTermFromInitialWithDepth(alloc, reader, initial, 0);
+}
+
+fn decodeTermFromInitialWithDepth(alloc: std.mem.Allocator, reader: anytype, initial: u8, depth: u16) anyerror!Term {
+    if (depth >= MAX_CBOR_DEPTH) {
+        std.debug.print("CBOR_DEPTH_EXCEEDED: depth={d} max={d}\n", .{ depth, MAX_CBOR_DEPTH });
+        return error.CborDepthExceeded;
+    }
+    const major = initial >> 5;
+    const addl = initial & 0x1f;
+
+    return switch (major) {
+        0 => Term{ .u64 = try decodeLen(addl, reader) },
+        1 => blk: {
+            const len = try decodeLen(addl, reader);
+            if (len > @as(u64, std.math.maxInt(i64))) return error.IntOutOfRange;
+            const signed = @as(i64, -1) - @as(i64, @intCast(len));
+            break :blk Term{ .i64 = signed };
+        },
+        2 => blk: {
+            if (addl == 31) {
+                // Indefinite-length bytes: concatenate chunks until break
+                var list = std.array_list.Managed(u8).init(alloc);
+                errdefer list.deinit();
+                while (true) {
+                    const b = try reader.readByte();
+                    if (b == 0xFF) break; // break byte
+                    const chunk_term = try decodeTermFromInitialWithDepth(alloc, reader, b, depth + 1);
+                    defer free(chunk_term, alloc);
+                    if (chunk_term != .bytes) return error.UnsupportedCborType;
+                    try list.appendSlice(chunk_term.bytes);
+                }
+                const bytes = try list.toOwnedSlice();
+                break :blk Term{ .bytes = bytes };
+            } else {
+                const len = try decodeLen(addl, reader);
+                if (len > MAX_CBOR_BYTES) return error.CborTooLarge;
+                const bytes = try alloc.alloc(u8, @intCast(len));
+                errdefer alloc.free(bytes);
+                try reader.readNoEof(bytes);
+                break :blk Term{ .bytes = bytes };
+            }
+        },
+        3 => blk: {
+            if (addl == 31) {
+                // Indefinite-length text: concatenate chunks until break
+                var list = std.array_list.Managed(u8).init(alloc);
+                errdefer list.deinit();
+                while (true) {
+                    const b = try reader.readByte();
+                    if (b == 0xFF) break; // break byte
+                    const chunk_term = try decodeTermFromInitialWithDepth(alloc, reader, b, depth + 1);
+                    defer free(chunk_term, alloc);
+                    if (chunk_term != .text) return error.UnsupportedCborType;
+                    try list.appendSlice(chunk_term.text);
+                }
+                const text = try list.toOwnedSlice();
+                break :blk Term{ .text = text };
+            } else {
+                const len = try decodeLen(addl, reader);
+                if (len > MAX_CBOR_BYTES) return error.CborTooLarge;
+                const text = try alloc.alloc(u8, @intCast(len));
+                errdefer alloc.free(text);
+                try reader.readNoEof(text);
+                break :blk Term{ .text = text };
+            }
+        },
+        4 => blk: {
+            if (addl == 31) {
+                var list = std.array_list.Managed(Term).init(alloc);
+                errdefer {
+                    for (list.items) |item| free(item, alloc);
+                    list.deinit();
+                }
+                while (true) {
+                    const b = try reader.readByte();
+                    if (b == 0xFF) break;
+                    if (list.items.len >= MAX_CBOR_ITEMS) return error.CborTooLarge;
+                    const item = try decodeTermFromInitialWithDepth(alloc, reader, b, depth + 1);
+                    try list.append(item);
+                }
+                const items = try list.toOwnedSlice();
+                break :blk Term{ .array = items };
+            } else {
+                const len = try decodeLen(addl, reader);
+                if (len > MAX_CBOR_ITEMS) return error.CborTooLarge;
+                const count: usize = @intCast(len);
+                const items = try alloc.alloc(Term, count);
+                var parsed: usize = 0;
+                errdefer {
+                    for (items[0..parsed]) |item| free(item, alloc);
+                    alloc.free(items);
+                }
+                while (parsed < count) : (parsed += 1) {
+                    items[parsed] = try decodeTermWithDepth(alloc, reader, depth + 1);
+                }
+                break :blk Term{ .array = items };
+            }
+        },
+        5 => blk: {
+            if (addl == 31) {
+                var list = std.array_list.Managed(MapEntry).init(alloc);
+                errdefer {
+                    for (list.items) |e| free(e.value, alloc);
+                    list.deinit();
+                }
+                while (true) {
+                    const b = try reader.readByte();
+                    if (b == 0xFF) break;
+                    if (list.items.len >= MAX_CBOR_ITEMS) return error.CborTooLarge;
+                    const key_term = try decodeTermFromInitialWithDepth(alloc, reader, b, depth + 1);
+                    const value = decodeTermWithDepth(alloc, reader, depth + 1) catch |err| {
+                        free(key_term, alloc);
+                        return err;
+                    };
+                    if (key_term == .u64) {
+                        try list.append(.{ .key = key_term.u64, .value = value });
+                    } else {
+                        // Skip non-u64 keyed entry (e.g. byte-string policy IDs)
+                        free(key_term, alloc);
+                        free(value, alloc);
+                    }
+                }
+                const entries = try list.toOwnedSlice();
+                break :blk Term{ .map_u64 = entries };
+            } else {
+                const len = try decodeLen(addl, reader);
+                if (len > MAX_CBOR_ITEMS) return error.CborTooLarge;
+                const count: usize = @intCast(len);
+                const entries = try alloc.alloc(MapEntry, count);
+                var parsed: usize = 0; // number of u64-keyed entries stored
+                var i: usize = 0; // loop counter for total entries
+                errdefer {
+                    for (entries[0..parsed]) |e| free(e.value, alloc);
+                    alloc.free(entries);
+                }
+                while (i < count) : (i += 1) {
+                    // Read key as any CBOR term, then check if it's u64
+                    const key_term = try decodeTermWithDepth(alloc, reader, depth + 1);
+                    const value = decodeTermWithDepth(alloc, reader, depth + 1) catch |err| {
+                        free(key_term, alloc);
+                        return err;
+                    };
+
+                    if (key_term == .u64) {
+                        // Store u64-keyed entry
+                        entries[parsed] = .{ .key = key_term.u64, .value = value };
+                        parsed += 1;
+                    } else {
+                        // Skip non-u64 keyed entry
+                        free(key_term, alloc);
+                        free(value, alloc);
+                    }
+                }
+                // Shrink array to actual number of u64-keyed entries
+                const final_entries = if (parsed < count)
+                    try alloc.realloc(entries, parsed)
+                else
+                    entries;
+                break :blk Term{ .map_u64 = final_entries };
+            }
+        },
+        6 => blk: {
+            const tag = try decodeLen(addl, reader);
+            const value = try alloc.create(Term);
+            errdefer alloc.destroy(value);
+            value.* = try decodeTermWithDepth(alloc, reader, depth + 1);
+            break :blk Term{ .tag = .{ .tag = tag, .value = value } };
+        },
+        7 => switch (addl) {
+            20 => Term{ .bool = false },
+            21 => Term{ .bool = true },
+            22 => Term{ .null = {} },
+            else => blk: {
+                const raw = try decodeUnsupportedAsBytes(alloc, reader, initial);
+                break :blk Term{ .bytes = raw };
+            },
+        },
+        else => return error.UnsupportedCborType,
+    };
+}
+
+fn decodeTerm(alloc: std.mem.Allocator, reader: anytype) anyerror!Term {
+    return decodeTermWithDepth(alloc, reader, 0);
+}
+
+fn decodeTermWithDepth(alloc: std.mem.Allocator, reader: anytype, depth: u16) anyerror!Term {
+    if (depth >= MAX_CBOR_DEPTH) {
+        std.debug.print("CBOR_DEPTH_EXCEEDED: depth={d} max={d}\n", .{ depth, MAX_CBOR_DEPTH });
+        return error.CborDepthExceeded;
+    }
+    const initial = try reader.readByte();
+    return decodeTermFromInitialWithDepth(alloc, reader, initial, depth);
+}
+
+fn decodeUnsupportedAsBytes(
+    alloc: std.mem.Allocator,
+    reader: anytype,
+    initial: u8,
+) anyerror![]u8 {
+    var list = std.array_list.Managed(u8).init(alloc);
+    errdefer list.deinit();
+    try list.append(initial);
+    try appendRawItemFromInitial(&list, reader, initial);
+    return list.toOwnedSlice();
+}
+
+fn appendRawItemFromInitial(list: *std.array_list.Managed(u8), reader: anytype, initial: u8) anyerror!void {
+    const major = initial >> 5;
+    const addl = initial & 0x1f;
+    switch (major) {
+        0, 1 => {
+            _ = try readLenWithBytes(addl, reader, list);
+        },
+        2, 3 => {
+            const len = try readLenWithBytes(addl, reader, list);
+            try readPayloadBytes(@intCast(len), reader, list);
+        },
+        4 => {
+            if (addl == 31) {
+                // Indefinite-length array: items until break (0xFF)
+                while (true) {
+                    const b = try reader.readByte();
+                    try list.append(b);
+                    if (b == 0xFF) break;
+                    try appendRawItemFromInitial(list, reader, b);
+                }
+            } else {
+                const count = try readLenWithBytes(addl, reader, list);
+                var i: u64 = 0;
+                while (i < count) : (i += 1) {
+                    try appendRawItem(list, reader);
+                }
+            }
+        },
+        5 => {
+            if (addl == 31) {
+                // Indefinite-length map: key/value pairs until break (0xFF)
+                while (true) {
+                    const b = try reader.readByte();
+                    try list.append(b);
+                    if (b == 0xFF) break;
+                    // key
+                    try appendRawItemFromInitial(list, reader, b);
+                    // value
+                    try appendRawItem(list, reader);
+                }
+            } else {
+                const count = try readLenWithBytes(addl, reader, list);
+                var i: u64 = 0;
+                while (i < count) : (i += 1) {
+                    try appendRawItem(list, reader);
+                    try appendRawItem(list, reader);
+                }
+            }
+        },
+        6 => {
+            _ = try readLenWithBytes(addl, reader, list);
+            try appendRawItem(list, reader);
+        },
+        7 => switch (addl) {
+            24 => try readFixedBytes(1, reader, list),
+            25 => try readFixedBytes(2, reader, list),
+            26 => try readFixedBytes(4, reader, list),
+            27 => try readFixedBytes(8, reader, list),
+            else => {},
+        },
+        else => return error.UnsupportedCborType,
+    }
+}
+
+fn appendRawItem(list: *std.array_list.Managed(u8), reader: anytype) anyerror!void {
+    const initial = try reader.readByte();
+    try list.append(initial);
+    try appendRawItemFromInitial(list, reader, initial);
+}
+
+fn readLenWithBytes(addl: u8, reader: anytype, list: *std.array_list.Managed(u8)) anyerror!u64 {
+    if (addl < 24) return addl;
+    return switch (addl) {
+        24 => blk: {
+            const b = try reader.readByte();
+            try list.append(b);
+            break :blk b;
+        },
+        25 => blk: {
+            var buf: [2]u8 = undefined;
+            try reader.readNoEof(&buf);
+            try list.appendSlice(&buf);
+            break :blk std.mem.readInt(u16, &buf, .big);
+        },
+        26 => blk: {
+            var buf: [4]u8 = undefined;
+            try reader.readNoEof(&buf);
+            try list.appendSlice(&buf);
+            break :blk std.mem.readInt(u32, &buf, .big);
+        },
+        27 => blk: {
+            var buf: [8]u8 = undefined;
+            try reader.readNoEof(&buf);
+            try list.appendSlice(&buf);
+            break :blk std.mem.readInt(u64, &buf, .big);
+        },
+        else => return error.UnsupportedCborType,
+    };
+}
+
+fn readFixedBytes(count: usize, reader: anytype, list: *std.array_list.Managed(u8)) anyerror!void {
+    var buf: [8]u8 = undefined;
+    var n: usize = 0;
+    while (n < count) : (n += 1) {
+        buf[n] = try reader.readByte();
+    }
+    try list.appendSlice(buf[0..count]);
+}
+
+fn readPayloadBytes(count: usize, reader: anytype, list: *std.array_list.Managed(u8)) anyerror!void {
+    var remaining = count;
+    var buf: [256]u8 = undefined;
+    while (remaining > 0) {
+        const chunk = @min(remaining, buf.len);
+        try reader.readNoEof(buf[0..chunk]);
+        try list.appendSlice(buf[0..chunk]);
+        remaining -= chunk;
+    }
+}
+
+fn decodeUnsigned(reader: anytype) !u64 {
+    const initial = try reader.readByte();
+    const major = initial >> 5;
+    const addl = initial & 0x1f;
+    if (major != 0) return error.UnsupportedCborType;
+    return decodeLen(addl, reader);
+}
+
+fn decodeLen(addl: u8, reader: anytype) !u64 {
+    if (addl < 24) return addl;
+    return switch (addl) {
+        24 => try reader.readByte(),
+        25 => blk: {
+            var buf: [2]u8 = undefined;
+            try reader.readNoEof(&buf);
+            break :blk std.mem.readInt(u16, &buf, .big);
+        },
+        26 => blk: {
+            var buf: [4]u8 = undefined;
+            try reader.readNoEof(&buf);
+            break :blk std.mem.readInt(u32, &buf, .big);
+        },
+        27 => blk: {
+            var buf: [8]u8 = undefined;
+            try reader.readNoEof(&buf);
+            break :blk std.mem.readInt(u64, &buf, .big);
+        },
+        else => return error.UnsupportedCborType,
+    };
+}
+
+fn termEqual(a: Term, b: Term) bool {
+    return switch (a) {
+        .u64 => |av| b == .u64 and b.u64 == av,
+        .i64 => |av| b == .i64 and b.i64 == av,
+        .bool => |av| b == .bool and b.bool == av,
+        .null => b == .null,
+        .bytes => |ab| b == .bytes and std.mem.eql(u8, ab, b.bytes),
+        .text => |at| b == .text and std.mem.eql(u8, at, b.text),
+        .array => |aa| blk: {
+            if (b != .array or b.array.len != aa.len) break :blk false;
+            for (aa, 0..) |item, i| {
+                if (!termEqual(item, b.array[i])) break :blk false;
+            }
+            break :blk true;
+        },
+        .map_u64 => |am| blk: {
+            if (b != .map_u64 or b.map_u64.len != am.len) break :blk false;
+            for (am, 0..) |e, i| {
+                if (b.map_u64[i].key != e.key) break :blk false;
+                if (!termEqual(e.value, b.map_u64[i].value)) break :blk false;
+            }
+            break :blk true;
+        },
+        .tag => |at| b == .tag and b.tag.tag == at.tag and termEqual(at.value.*, b.tag.value.*),
+    };
+}
+
+fn encodeToBytes(alloc: std.mem.Allocator, term: Term) ![]u8 {
+    var list = std.array_list.Managed(u8).init(alloc);
+    errdefer list.deinit();
+    try encode(term, compat.listWriter(&list));
+    return list.toOwnedSlice();
+}
+
+test "cbor term encode/decode roundtrip scalars" {
+    const alloc = std.testing.allocator;
+
+    const t1 = Term{ .u64 = 42 };
+    const b1 = try encodeToBytes(alloc, t1);
+    defer alloc.free(b1);
+
+    var fbs = compat.fixedBufferStream(b1);
+    const d1 = try decode(alloc, fbs.reader());
+    defer free(d1, alloc);
+
+    try std.testing.expect(termEqual(t1, d1));
+
+    const b2 = try encodeToBytes(alloc, d1);
+    defer alloc.free(b2);
+    try std.testing.expect(std.mem.eql(u8, b1, b2));
+
+    const t2 = Term{ .i64 = -2 };
+    const b3 = try encodeToBytes(alloc, t2);
+    defer alloc.free(b3);
+
+    var fbs2 = compat.fixedBufferStream(b3);
+    const d2 = try decode(alloc, fbs2.reader());
+    defer free(d2, alloc);
+
+    try std.testing.expect(termEqual(t2, d2));
+
+    const t3 = Term{ .bool = true };
+    const b4 = try encodeToBytes(alloc, t3);
+    defer alloc.free(b4);
+
+    var fbs3 = compat.fixedBufferStream(b4);
+    const d3 = try decode(alloc, fbs3.reader());
+    defer free(d3, alloc);
+
+    try std.testing.expect(termEqual(t3, d3));
+}
+
+test "cbor term encode/decode roundtrip composite" {
+    const alloc = std.testing.allocator;
+
+    const bytes = try alloc.dupe(u8, "hi");
+    const text = try alloc.dupe(u8, "tsunagi");
+
+    var arr = try alloc.alloc(Term, 3);
+    arr[0] = Term{ .u64 = 1 };
+    arr[1] = Term{ .bytes = bytes };
+    arr[2] = Term{ .text = text };
+
+    var map = try alloc.alloc(MapEntry, 2);
+    map[0] = .{ .key = 7, .value = Term{ .array = arr } };
+    map[1] = .{ .key = 9, .value = Term{ .u64 = 1234 } };
+
+    const t = Term{ .map_u64 = map };
+
+    const b1 = try encodeToBytes(alloc, t);
+    defer alloc.free(b1);
+
+    var fbs = compat.fixedBufferStream(b1);
+    const d1 = try decode(alloc, fbs.reader());
+    defer free(d1, alloc);
+
+    try std.testing.expect(termEqual(t, d1));
+
+    const b2 = try encodeToBytes(alloc, d1);
+    defer alloc.free(b2);
+    try std.testing.expect(std.mem.eql(u8, b1, b2));
+
+    free(t, alloc);
+}
+
+test "cbor term encode/decode roundtrip null and tag" {
+    const alloc = std.testing.allocator;
+
+    const t1 = Term{ .null = {} };
+    const b1 = try encodeToBytes(alloc, t1);
+    defer alloc.free(b1);
+
+    var fbs1 = compat.fixedBufferStream(b1);
+    const d1 = try decode(alloc, fbs1.reader());
+    defer free(d1, alloc);
+    try std.testing.expect(termEqual(t1, d1));
+
+    const tag_value = try alloc.create(Term);
+    tag_value.* = Term{ .u64 = 1 };
+    const t2 = Term{ .tag = .{ .tag = 8, .value = tag_value } };
+    const b2 = try encodeToBytes(alloc, t2);
+    defer alloc.free(b2);
+
+    var fbs2 = compat.fixedBufferStream(b2);
+    const d2 = try decode(alloc, fbs2.reader());
+    defer free(d2, alloc);
+    try std.testing.expect(termEqual(t2, d2));
+
+    const b3 = try encodeToBytes(alloc, d2);
+    defer alloc.free(b3);
+    try std.testing.expect(std.mem.eql(u8, b2, b3));
+
+    free(t2, alloc);
+}
+
+test "cbor term decodes unsupported as bytes" {
+    const alloc = std.testing.allocator;
+
+    const input = [_]u8{ 0xC1, 0x00, 0x01 };
+    var fbs = compat.fixedBufferStream(&input);
+
+    const t1 = try decode(alloc, fbs.reader());
+    defer free(t1, alloc);
+    try std.testing.expect(t1 == .tag);
+    try std.testing.expectEqual(@as(u64, 1), t1.tag.tag);
+    try std.testing.expect(t1.tag.value.* == .u64);
+    try std.testing.expectEqual(@as(u64, 0), t1.tag.value.*.u64);
+
+    const t2 = try decode(alloc, fbs.reader());
+    defer free(t2, alloc);
+    try std.testing.expect(t2 == .u64);
+    try std.testing.expectEqual(@as(u64, 1), t2.u64);
+}
+
+test "cbor decode indefinite array" {
+    const alloc = std.testing.allocator;
+
+    const bytes = &[_]u8{ 0x9f, 0x01, 0x02, 0xff };
+    var fbs = compat.fixedBufferStream(bytes);
+    const term = try decode(alloc, fbs.reader());
+    defer free(term, alloc);
+
+    try std.testing.expect(term == .array);
+    try std.testing.expectEqual(@as(usize, 2), term.array.len);
+    try std.testing.expect(term.array[0] == .u64);
+    try std.testing.expectEqual(@as(u64, 1), term.array[0].u64);
+}
+
+test "cbor decode indefinite map u64 keys" {
+    const alloc = std.testing.allocator;
+
+    const bytes = &[_]u8{ 0xbf, 0x01, 0x02, 0x03, 0x04, 0xff };
+    var fbs = compat.fixedBufferStream(bytes);
+    const term = try decode(alloc, fbs.reader());
+    defer free(term, alloc);
+
+    try std.testing.expect(term == .map_u64);
+    try std.testing.expectEqual(@as(usize, 2), term.map_u64.len);
+    try std.testing.expectEqual(@as(u64, 1), term.map_u64[0].key);
+    try std.testing.expect(term.map_u64[0].value == .u64);
+    try std.testing.expectEqual(@as(u64, 2), term.map_u64[0].value.u64);
+}
+
+test "cbor decode indefinite bytes" {
+    const alloc = std.testing.allocator;
+
+    // 0x5f = indefinite bytes, 0x41 0x61 = bytes("a"), 0x42 0x62 0x63 = bytes("bc"), 0xff = break
+    const bytes = &[_]u8{ 0x5f, 0x41, 0x61, 0x42, 0x62, 0x63, 0xff };
+    var fbs = compat.fixedBufferStream(bytes);
+    const term = try decode(alloc, fbs.reader());
+    defer free(term, alloc);
+
+    try std.testing.expect(term == .bytes);
+    try std.testing.expectEqualStrings("abc", term.bytes);
+}
+
+test "cbor decode indefinite text" {
+    const alloc = std.testing.allocator;
+
+    // 0x7f = indefinite text, 0x61 0x68 = text("h"), 0x65 0x65 0x6c 0x6c 0x6f = text("ello"), 0xff = break
+    const bytes = &[_]u8{ 0x7f, 0x61, 0x68, 0x64, 0x65, 0x6c, 0x6c, 0x6f, 0xff };
+    var fbs = compat.fixedBufferStream(bytes);
+    const term = try decode(alloc, fbs.reader());
+    defer free(term, alloc);
+
+    try std.testing.expect(term == .text);
+    try std.testing.expectEqualStrings("hello", term.text);
+}

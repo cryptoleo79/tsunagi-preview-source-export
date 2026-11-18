@@ -1,0 +1,10 @@
+# Weekly retention cleanup timer
+[Unit]
+Description=Weekly Tsunagi Retention Cleanup
+
+[Timer]
+OnCalendar=weekly
+Persistent=true
+
+[Install]
+WantedBy=timers.target

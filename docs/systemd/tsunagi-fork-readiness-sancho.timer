@@ -1,0 +1,10 @@
+# Daily fork readiness timer — sancho
+[Unit]
+Description=Daily Tsunagi Fork Readiness (sancho)
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+
+[Install]
+WantedBy=timers.target

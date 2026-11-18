@@ -1,0 +1,10 @@
+# Nightly auto vector capture — sancho
+[Unit]
+Description=Nightly Tsunagi Auto Capture (sancho)
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+
+[Install]
+WantedBy=timers.target

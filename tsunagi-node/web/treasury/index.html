@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TSUNAGI Treasury — Transparent On-Chain Funding</title>
+<meta name="description" content="TSUNAGI Treasury: transparent on-chain funding for independent Cardano infrastructure development.">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #05080e;
+  --bg-surface: #0a0f1a;
+  --bg-card: rgba(12,18,30,0.65);
+  --border: rgba(80,120,180,0.12);
+  --border-accent: rgba(80,140,220,0.35);
+  --text: #c8ced8;
+  --text-h: #e8ecf2;
+  --text-m: #7a8598;
+  --text-d: #4c5668;
+  --accent: #3d6fa8;
+  --accent-l: #5a8ec8;
+  --white: #eceef3;
+  --yellow: #a89b3d;
+  --yellow-bg: rgba(168,155,61,0.08);
+  --yellow-border: rgba(168,155,61,0.25);
+  --mono: 'SF Mono','Cascadia Code','Fira Code','Consolas',monospace;
+  --sans: -apple-system,BlinkMacSystemFont,'Segoe UI','Inter',Helvetica,Arial,sans-serif;
+  --serif: 'Charter','Georgia','Cambria','Times New Roman',serif;
+}
+html { scroll-behavior: smooth; }
+body { font-family: var(--serif); background: var(--bg); color: var(--text); line-height: 1.82; font-size: 16.5px; overflow-x: hidden; }
+
+.ub { position:fixed; top:0; left:0; right:0; z-index:100; height:48px; display:flex; align-items:center; justify-content:space-between; padding:0 28px; background:rgba(5,8,14,0.92); backdrop-filter:blur(14px); border-bottom:1px solid var(--border); }
+.ub-l { display:flex; align-items:center; gap:20px; }
+.ub-brand { font-family:var(--sans); font-size:0.82rem; font-weight:700; letter-spacing:0.14em; color:var(--white); text-decoration:none; }
+.ub-nav { display:flex; gap:6px; flex-wrap:wrap; }
+.ub-nav a { font-family:var(--sans); font-size:0.75rem; font-weight:500; letter-spacing:0.03em; color:var(--text-m); text-decoration:none; padding:5px 12px; border-radius:4px; border:1px solid transparent; transition:all 0.2s; }
+.ub-nav a:hover { color:var(--white); border-color:var(--border-accent); background:rgba(60,112,180,0.08); }
+.lang-switch { display:flex; align-items:center; gap:6px; margin-left:12px; font-family:var(--sans); font-size:0.75rem; white-space:nowrap; }
+.lang-switch a { text-decoration:none; color:var(--text-m); transition:color 0.2s ease; }
+.lang-switch a:hover { color:var(--text); }
+.lang-cur { color:var(--accent-l) !important; font-weight:600; }
+.lang-div { opacity:0.4; }
+
+.pg { max-width:720px; margin:0 auto; padding:80px 28px 60px; }
+
+.tb { text-align:center; padding:60px 0 48px; border-bottom:1px solid var(--border); margin-bottom:48px; }
+.tb h1 { font-size:2.1rem; font-weight:700; color:var(--white); letter-spacing:0.04em; margin-bottom:8px; }
+.tb .st { font-size:1.05rem; color:var(--text-m); font-style:italic; margin-bottom:28px; }
+.tb .mt { font-family:var(--sans); font-size:0.82rem; color:var(--text-d); letter-spacing:0.03em; }
+
+/* Status badge */
+.dev-badge { display:inline-flex; align-items:center; gap:8px; margin:0 auto 48px; padding:10px 20px; font-family:var(--mono); font-size:0.76rem; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; color:var(--yellow); background:var(--yellow-bg); border:1px solid var(--yellow-border); border-radius:4px; }
+.dev-badge-dot { width:8px; height:8px; border-radius:50%; background:var(--yellow); animation:pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+.badge-wrap { text-align:center; }
+
+h2 { font-size:1.35rem; font-weight:700; color:var(--text-h); margin:52px 0 20px; padding-bottom:10px; border-bottom:1px solid var(--border); }
+p { margin-bottom:16px; text-align:justify; hyphens:auto; }
+strong { color:var(--text-h); }
+.pg a { color:var(--accent-l); text-decoration:none; border-bottom:1px solid rgba(90,142,200,0.3); }
+.pg a:hover { border-color:var(--accent-l); }
+ul { margin:0 0 16px 24px; }
+li { margin-bottom:8px; line-height:1.7; }
+hr { border:none; border-top:1px solid var(--border); margin:48px 0; }
+
+/* Info cards */
+.info-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:32px 0; }
+.info-card { background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:20px 22px; }
+.info-label { font-family:var(--mono); font-size:0.68rem; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--accent-l); margin-bottom:8px; }
+.info-value { font-family:var(--mono); font-size:0.88rem; color:var(--text-d); font-style:italic; }
+
+/* Principles list */
+.principles { background:var(--bg-surface); border-left:3px solid var(--accent); padding:24px 28px; border-radius:0 6px 6px 0; margin:32px 0; }
+.principles ul { margin:0 0 0 20px; }
+.principles li { font-size:0.92rem; margin-bottom:8px; }
+
+.closing { text-align:center; padding:40px 0; margin-top:20px; }
+.closing p { text-align:center; font-size:1rem; color:var(--text-m); margin-bottom:12px; }
+.closing .motto { font-size:1.2rem; font-weight:600; color:var(--white); font-style:italic; }
+
+.ft { text-align:center; padding:40px 0 32px; border-top:1px solid var(--border); margin-top:60px; }
+.ft p { font-family:var(--sans); font-size:0.78rem; color:var(--text-d); text-align:center; letter-spacing:0.03em; }
+.ft .fm { font-size:0.88rem; color:var(--text-m); font-weight:600; margin-bottom:8px; }
+
+@media(max-width:768px){ body{font-size:15.5px;} .pg{padding:70px 18px 40px;} .tb h1{font-size:1.7rem;} .info-grid{grid-template-columns:1fr;} .ub{padding:0 16px;} .ub-nav a{padding:5px 8px;font-size:0.7rem;} }
+@media(max-width:480px){ body{font-size:15px;} .tb h1{font-size:1.4rem;} .pg{padding:64px 14px 32px;} }
+</style>
+</head>
+<body>
+
+<!-- Utility Bar (shared) -->
+<div id="nav-container"></div>
+<script src="/assets/nav.js"></script>
+
+<div class="pg">
+
+<div class="tb">
+  <h1>TSUNAGI Treasury</h1>
+  <div class="st">Transparent On-Chain Funding for Independent Cardano Infrastructure</div>
+  <div class="mt">ASY</div>
+</div>
+
+<div class="badge-wrap">
+  <span class="dev-badge" style="color:#3da86f;background:rgba(61,168,111,0.08);border-color:rgba(61,168,111,0.25);"><span class="dev-badge-dot" style="background:#3da86f;"></span> TSUNA Pool &mdash; Operational</span>
+</div>
+
+<h2>1. Why a Treasury Is Needed</h2>
+
+<p>Independent infrastructure development requires sustainable funding. TSUNAGI is developed outside institutional funding structures &mdash; no Catalyst proposals, no governance grants, no venture capital. The project depends on transparent, voluntary support from delegators and contributors.</p>
+
+<p>Sustained development requires resources for:</p>
+
+<ul>
+  <li><strong>Infrastructure</strong> &mdash; Servers, network bandwidth, and storage for validation nodes on preview and mainnet networks.</li>
+  <li><strong>Testing</strong> &mdash; Extended soak runs, cross-network validation, and snapshot integrity verification require dedicated compute capacity.</li>
+  <li><strong>Research</strong> &mdash; Protocol specification analysis, cross-chain experimentation, and alternative storage engine evaluation.</li>
+  <li><strong>Engineering time</strong> &mdash; The deterministic pipeline, shadow verification, observability stack, and persistent storage represent thousands of hours of focused engineering.</li>
+  <li><strong>Long-term maintenance</strong> &mdash; Protocol upgrades, hard fork compatibility, security patches, and operational tooling require sustained attention across the lifetime of the network.</li>
+</ul>
+
+<hr>
+
+<h2>2. Independent Engineering</h2>
+
+<p>TSUNAGI began as an independent research and engineering effort. The project has been built without institutional grants, governance funding, or venture capital &mdash; sustained entirely through individual commitment and the conviction that Cardano benefits from implementation diversity, deterministic infrastructure, and operator-first design.</p>
+
+<p>This independence is deliberate. Development priorities are driven by engineering judgment and operational reality, not by proposal cycles, funding committees, or external roadmap requirements. The architecture reflects choices made for technical merit &mdash; deterministic execution, explicit memory management, embedded observability &mdash; rather than choices shaped by what is fundable.</p>
+
+<p>The work so far &mdash; a deterministic ledger pipeline, shadow verification, LMDB persistence, four observability subsystems, and continuous preview-network validation &mdash; represents thousands of hours of focused engineering. Sustaining this level of effort requires the project to develop a funding model that matches its independence: transparent, community-aligned, and free of institutional dependencies.</p>
+
+<p>Community support matters because independent infrastructure work must become sustainable to remain independent. The treasury model described below is designed to achieve that sustainability while preserving the engineering autonomy that defines the project.</p>
+
+<hr>
+
+<h2>3. The TSUNAGI Funding Model</h2>
+
+<p>The TSUNAGI treasury operates through the <strong>TSUNA</strong> stake pool &mdash; an on-chain funding mechanism aligned with Cardano's staking model.</p>
+
+<ul>
+  <li>Contributions are sent to the <strong>TSUNAGI treasury wallet</strong> &mdash; a standard Cardano address dedicated to project funding, reachable via the ADA handle <strong>$tsunagi</strong>.</li>
+  <li>The treasury wallet <strong>delegates to the TSUNA stake pool</strong> (TSUNAGI Infrastructure), ensuring contributed ADA participates actively in the network.</li>
+  <li>Delegated treasury stake becomes <strong>productive</strong>: it earns staking rewards that compound over time, providing a sustainable funding base.</li>
+  <li>Staking rewards <strong>support continued node development</strong>, infrastructure costs, and research activities.</li>
+  <li>All treasury activity is <strong>publicly visible on-chain</strong>. Any community member can verify the treasury wallet's balance, delegation status, and transaction history.</li>
+</ul>
+
+<hr>
+
+<h2>4. Transparency Principles</h2>
+
+<div class="principles">
+  <ul>
+    <li><strong>Treasury wallet address</strong> &mdash; Dedicated project address, verifiable on-chain once published.</li>
+    <li><strong>Stake pool identity</strong> &mdash; Pool ticker and pool ID published, enabling delegators to verify delegation status.</li>
+    <li><strong>Support address</strong> &mdash; Dedicated ADA handle or address for contributions, distinct from personal wallets.</li>
+    <li><strong>Public funding explanation</strong> &mdash; This document is the canonical explanation of the treasury model and its principles.</li>
+    <li><strong>Separation of funds</strong> &mdash; Treasury wallet is a distinct address used exclusively for project funding. Personal funds are never commingled.</li>
+  </ul>
+</div>
+
+<hr>
+
+<h2>5. Why This Model Matters</h2>
+
+<ul>
+  <li><strong>Self-sustaining infrastructure funding.</strong> The treasury generates ongoing staking rewards rather than depending on periodic grants or one-time donations.</li>
+  <li><strong>Reduced dependence on grants.</strong> Development priorities are set by engineering requirements, not funding timelines or governance cycles.</li>
+  <li><strong>Alignment with Cardano staking model.</strong> Treasury stake strengthens the pool it delegates to, contributing to decentralization.</li>
+  <li><strong>Long-term ecosystem resilience.</strong> Sustainably funded independent implementation provides lasting infrastructure diversity.</li>
+</ul>
+
+<hr>
+
+<h2>6. Pool Identity</h2>
+
+<p>The TSUNAGI treasury model operates through the following on-chain identity:</p>
+
+<div class="info-grid">
+  <div class="info-card">
+    <div class="info-label">Pool Name</div>
+    <div class="info-value" style="color:var(--text-h);font-style:normal;">TSUNAGI Infrastructure</div>
+  </div>
+  <div class="info-card">
+    <div class="info-label">Ticker</div>
+    <div class="info-value" style="color:var(--text-h);font-style:normal;">TSUNA</div>
+  </div>
+  <div class="info-card">
+    <div class="info-label">ADA Handle</div>
+    <div class="info-value" style="color:var(--text-h);font-style:normal;">$tsunagi</div>
+  </div>
+  <div class="info-card">
+    <div class="info-label">Pool ID</div>
+    <div class="info-value" style="font-size:0.68rem;word-break:break-all;">pool1hnmcevsa69k88nh4d6ud5qyykwmgzrg6crju79zsv2uu65mkgr8</div>
+  </div>
+</div>
+
+<p>The TSUNA pool is the project's aligned stake pool identity. Delegation to TSUNA contributes to network decentralization while helping sustain TSUNAGI infrastructure and development. The core principles &mdash; transparency, on-chain visibility, separation of funds, and alignment with the Cardano staking model &mdash; are fixed.</p>
+
+<hr>
+
+<h2>7. Closing</h2>
+
+<div class="closing">
+  <p>TSUNAGI exists to strengthen Cardano through independent implementation.<br>The treasury exists to sustain that work transparently.</p>
+  <p class="motto">Let It Run. Let It Resolve.</p>
+</div>
+
+<div class="ft">
+  <p class="fm">Let It Run. Let It Resolve.</p>
+  <p>tsunagi.tech &middot; Independent Cardano infrastructure research &middot; 2026</p>
+</div>
+
+</div>
+
+</body>
+</html>

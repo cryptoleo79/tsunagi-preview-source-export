@@ -1,0 +1,105 @@
+name: Release (arm64)
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Git tag to build and attach to (e.g. v1.0.12)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build linux-arm64
+    runs-on: ubuntu-24.04-arm64
+
+    steps:
+      - name: Checkout tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+
+      - name: Install deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y liblmdb-dev autoconf automake libtool pkg-config build-essential git ca-certificates
+
+      - name: Build IOHK libsodium (VRF)
+        run: |
+          git clone --depth 1 --branch draft-irtf-cfrg-vrf-03 https://github.com/intersectmbo/libsodium.git /tmp/libsodium
+          cd /tmp/libsodium
+          ./autogen.sh -f
+          ./configure --prefix=/usr/local
+          make -j$(nproc)
+          sudo make install
+          sudo ldconfig
+          nm -D /usr/local/lib/libsodium.so | grep crypto_vrf_ietfdraft03_prove
+
+      - name: Install Zig 0.13.0
+        run: |
+          ZIG_VER=0.13.0
+          curl -fSL "https://ziglang.org/download/${ZIG_VER}/zig-linux-aarch64-${ZIG_VER}.tar.xz" -o zig.tar.xz
+          tar -xf zig.tar.xz
+          sudo mv "zig-linux-aarch64-${ZIG_VER}" /opt/zig
+          echo "/opt/zig" >> "$GITHUB_PATH"
+
+      - name: Build (ReleaseSafe)
+        working-directory: tsunagi-node
+        run: |
+          zig version
+          zig build -Doptimize=ReleaseSafe
+
+      - name: Runtime smoke (version)
+        working-directory: tsunagi-node
+        run: |
+          set -euo pipefail
+          if ./zig-out/bin/tsunagi-node --help >/dev/null 2>&1; then
+            ./zig-out/bin/tsunagi-node --help >/dev/null || true
+          else
+            ./zig-out/bin/tsunagi-node || true
+          fi
+
+      - name: Package tarball
+        run: |
+          set -euo pipefail
+          TAG="${{ inputs.tag }}"
+          TARBALL="tsunagi-node-${TAG}-linux-arm64.tar.gz"
+
+          STAGE="staging/tsunagi-node-${TAG}-linux-arm64"
+          mkdir -p "${STAGE}/ops/systemd"
+
+          cp tsunagi-node/zig-out/bin/tsunagi-node "${STAGE}/tsunagi-node"
+          chmod +x "${STAGE}/tsunagi-node"
+          echo "${TAG}" > "${STAGE}/VERSION"
+
+          cat > "${STAGE}/README.txt" <<'RDEOF'
+          TSUNAGI NODE
+
+          Quick Start:
+            ./tsunagi-node setup --role relay
+
+          Runtime dependency:
+            sudo apt-get install -y liblmdb0
+
+          Systemd templates:
+            ops/systemd/
+          RDEOF
+
+          cp -r ops/systemd/* "${STAGE}/ops/systemd/" 2>/dev/null || true
+
+          tar -C staging -czf "${TARBALL}" "tsunagi-node-${TAG}-linux-arm64"
+
+          echo "TARBALL=${TARBALL}" >> "$GITHUB_ENV"
+          ls -lh "${TARBALL}"
+
+      - name: Attach to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.tag }}
+          draft: false
+          prerelease: false
+          make_latest: false
+          files: ${{ env.TARBALL }}

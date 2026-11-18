@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CBOR Playground — TSUNAGI Labs</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+--bg:#05080e;--bg-surface:#0a0f1a;--bg-card:rgba(12,18,30,0.65);
+--border:rgba(80,120,180,0.10);--border-hover:rgba(80,120,180,0.28);
+--border-accent:rgba(80,140,220,0.35);
+--text:#d0d6e2;--text-m:#7a8598;--text-d:#4c5668;
+--accent:#3d6fa8;--accent-l:#5a8ec8;--white:#eceef3;
+--green:#3da86f;--red:#a83d3d;--amber:#a89b3d;
+--mono:'SF Mono','Cascadia Code','Fira Code','Consolas',monospace;
+--sans:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter',Helvetica,Arial,sans-serif;
+}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh;}
+
+.ub{position:fixed;top:0;left:0;right:0;z-index:100;height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;background:rgba(5,8,14,0.92);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);}
+.ub-l{display:flex;align-items:center;gap:20px;}
+.ub-brand{font-size:0.82rem;font-weight:700;letter-spacing:0.14em;color:var(--white);text-decoration:none;}
+.ub-nav{display:flex;gap:6px;flex-wrap:wrap;}
+.ub-nav a{font-size:0.75rem;font-weight:500;letter-spacing:0.03em;color:var(--text-m);text-decoration:none;padding:5px 12px;border-radius:4px;border:1px solid transparent;transition:all 0.2s;}
+.ub-nav a:hover{color:var(--white);border-color:var(--border-accent);background:rgba(60,112,180,0.08);}
+
+.pg{max-width:960px;margin:0 auto;padding:80px 28px 60px;}
+.tb{text-align:center;margin-bottom:32px;}
+.tb h1{font-size:1.5rem;font-weight:700;color:var(--white);letter-spacing:0.04em;margin-bottom:8px;}
+.tb p{font-size:0.85rem;color:var(--text-m);}
+
+.input-area{margin-bottom:20px;}
+.input-area label{display:block;font-family:var(--mono);font-size:0.65rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-d);margin-bottom:8px;}
+.hex-input{width:100%;min-height:80px;padding:14px 16px;background:var(--bg-surface);border:1px solid var(--border);border-radius:6px;color:var(--white);font-family:var(--mono);font-size:0.82rem;resize:vertical;outline:none;transition:border-color 0.2s;}
+.hex-input:focus{border-color:var(--border-accent);}
+.hex-input::placeholder{color:var(--text-d);}
+
+.btn-row{display:flex;gap:10px;margin-bottom:24px;}
+.btn{font-family:var(--mono);font-size:0.72rem;font-weight:600;letter-spacing:0.04em;padding:8px 20px;border-radius:4px;border:1px solid var(--border-accent);background:rgba(60,112,180,0.08);color:var(--accent-l);cursor:pointer;transition:all 0.2s;}
+.btn:hover{color:var(--white);background:rgba(60,112,180,0.15);}
+.btn-clear{border-color:var(--border);color:var(--text-d);background:transparent;}
+.btn-clear:hover{color:var(--text);border-color:var(--border-hover);}
+
+.output-label{font-family:var(--mono);font-size:0.65rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-d);margin-bottom:8px;}
+.output{background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:16px 18px;min-height:100px;font-family:var(--mono);font-size:0.78rem;color:var(--text);white-space:pre-wrap;word-break:break-all;overflow-x:auto;}
+.output .err{color:var(--red);}
+.output .type{color:var(--accent-l);}
+.output .key{color:var(--amber);}
+.output .val{color:var(--green);}
+.output .indent{color:var(--text-d);}
+
+.ft{text-align:center;padding:40px 0 32px;border-top:1px solid var(--border);margin-top:48px;}
+.ft p{font-size:0.78rem;color:var(--text-d);letter-spacing:0.03em;}
+
+@media(max-width:768px){.ub-nav{display:none;}.pg{padding:70px 18px 40px;}}
+</style>
+</head>
+<body>
+
+<div class="ub">
+  <div class="ub-l"><a href="/" class="ub-brand">TSUNAGI</a></div>
+  <nav class="ub-nav">
+    <a href="/" class="ub-a">Home</a>
+    <a href="/explorer/" class="ub-a">Explorer</a>
+    <a href="/decode/" class="ub-a">Decode</a>
+    <a href="/labs/" class="ub-a">Labs</a>
+  </nav>
+</div>
+
+<div class="pg">
+  <div class="tb">
+    <h1>CBOR Playground</h1>
+    <p>Paste CBOR hex and decode it into a readable tree</p>
+  </div>
+
+  <div class="input-area">
+    <label>CBOR Hex Input</label>
+    <textarea class="hex-input" id="hex-input" placeholder="Paste CBOR hex here (e.g. 82 01 82 02 03 or 820182020a)"></textarea>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn" id="btn-decode" onclick="decodeCbor()">Decode</button>
+    <button class="btn btn-clear" onclick="clearAll()">Clear</button>
+  </div>
+
+  <div class="output-label">Decoded Output</div>
+  <div class="output" id="output">Paste hex above and click Decode.</div>
+
+  <div class="ft">
+    <p>TSUNAGI Labs &middot; CBOR Playground</p>
+  </div>
+</div>
+
+<script>
+function hexToBytes(hex) {
+  hex = hex.replace(/\s+/g, '');
+  if (hex.length % 2 !== 0) throw new Error('Odd hex length');
+  var bytes = new Uint8Array(hex.length / 2);
+  for (var i = 0; i < hex.length; i += 2) {
+    var b = parseInt(hex.substr(i, 2), 16);
+    if (isNaN(b)) throw new Error('Invalid hex at position ' + i);
+    bytes[i / 2] = b;
+  }
+  return bytes;
+}
+
+function CborReader(bytes) {
+  this.data = bytes;
+  this.pos = 0;
+}
+CborReader.prototype.remaining = function() { return this.data.length - this.pos; };
+CborReader.prototype.readByte = function() {
+  if (this.pos >= this.data.length) throw new Error('Unexpected end of input');
+  return this.data[this.pos++];
+};
+CborReader.prototype.readBytes = function(n) {
+  if (this.pos + n > this.data.length) throw new Error('Unexpected end of input');
+  var slice = this.data.slice(this.pos, this.pos + n);
+  this.pos += n;
+  return slice;
+};
+CborReader.prototype.readArg = function(ai) {
+  if (ai < 24) return ai;
+  if (ai === 24) return this.readByte();
+  if (ai === 25) { var b = this.readBytes(2); return (b[0] << 8) | b[1]; }
+  if (ai === 26) { var b = this.readBytes(4); return ((b[0] << 24) | (b[1] << 16) | (b[2] << 8) | b[3]) >>> 0; }
+  if (ai === 27) {
+    var b = this.readBytes(8);
+    var hi = ((b[0] << 24) | (b[1] << 16) | (b[2] << 8) | b[3]) >>> 0;
+    var lo = ((b[4] << 24) | (b[5] << 16) | (b[6] << 8) | b[7]) >>> 0;
+    return hi * 4294967296 + lo;
+  }
+  throw new Error('Unsupported additional info: ' + ai);
+};
+
+function decodeCborItem(reader) {
+  var initial = reader.readByte();
+  var mt = initial >> 5;
+  var ai = initial & 0x1f;
+
+  if (mt === 0) { // unsigned int
+    return { type: 'uint', value: reader.readArg(ai) };
+  }
+  if (mt === 1) { // negative int
+    return { type: 'nint', value: -1 - reader.readArg(ai) };
+  }
+  if (mt === 2) { // byte string
+    if (ai === 31) { // indefinite
+      var chunks = [];
+      while (true) {
+        var peek = reader.readByte();
+        if (peek === 0xff) break;
+        reader.pos--;
+        var chunk = decodeCborItem(reader);
+        chunks.push(chunk.value);
+      }
+      return { type: 'bytes', value: '[chunks:' + chunks.length + ']', len: '?' };
+    }
+    var len = reader.readArg(ai);
+    var bytes = reader.readBytes(len);
+    var hex = '';
+    for (var i = 0; i < Math.min(bytes.length, 32); i++) hex += ('0' + bytes[i].toString(16)).slice(-2);
+    if (bytes.length > 32) hex += '...';
+    return { type: 'bytes', value: hex, len: len };
+  }
+  if (mt === 3) { // text string
+    if (ai === 31) {
+      var parts = [];
+      while (true) {
+        var peek = reader.readByte();
+        if (peek === 0xff) break;
+        reader.pos--;
+        parts.push(decodeCborItem(reader).value);
+      }
+      return { type: 'text', value: parts.join('') };
+    }
+    var len = reader.readArg(ai);
+    var bytes = reader.readBytes(len);
+    var str = '';
+    for (var i = 0; i < bytes.length; i++) str += String.fromCharCode(bytes[i]);
+    return { type: 'text', value: str };
+  }
+  if (mt === 4) { // array
+    var items = [];
+    if (ai === 31) {
+      while (true) {
+        if (reader.data[reader.pos] === 0xff) { reader.pos++; break; }
+        items.push(decodeCborItem(reader));
+      }
+    } else {
+      var count = reader.readArg(ai);
+      for (var i = 0; i < count; i++) items.push(decodeCborItem(reader));
+    }
+    return { type: 'array', value: items, len: items.length };
+  }
+  if (mt === 5) { // map
+    var entries = [];
+    if (ai === 31) {
+      while (true) {
+        if (reader.data[reader.pos] === 0xff) { reader.pos++; break; }
+        var k = decodeCborItem(reader);
+        var v = decodeCborItem(reader);
+        entries.push({ key: k, val: v });
+      }
+    } else {
+      var count = reader.readArg(ai);
+      for (var i = 0; i < count; i++) {
+        var k = decodeCborItem(reader);
+        var v = decodeCborItem(reader);
+        entries.push({ key: k, val: v });
+      }
+    }
+    return { type: 'map', value: entries, len: entries.length };
+  }
+  if (mt === 6) { // tag
+    var tag = reader.readArg(ai);
+    var content = decodeCborItem(reader);
+    return { type: 'tag', tag: tag, value: content };
+  }
+  if (mt === 7) { // simple/float
+    if (ai === 20) return { type: 'simple', value: false };
+    if (ai === 21) return { type: 'simple', value: true };
+    if (ai === 22) return { type: 'simple', value: null };
+    if (ai === 23) return { type: 'simple', value: 'undefined' };
+    if (ai === 25 || ai === 26 || ai === 27) {
+      reader.readArg(ai); // skip float bytes
+      return { type: 'float', value: '(float)' };
+    }
+    return { type: 'simple', value: 'simple(' + ai + ')' };
+  }
+  throw new Error('Unknown major type: ' + mt);
+}
+
+function renderItem(item, depth) {
+  var pad = '';
+  for (var i = 0; i < depth; i++) pad += '  ';
+  var s = '';
+
+  if (item.type === 'uint') {
+    s += pad + '<span class="type">uint</span> <span class="val">' + item.value + '</span>\n';
+  } else if (item.type === 'nint') {
+    s += pad + '<span class="type">nint</span> <span class="val">' + item.value + '</span>\n';
+  } else if (item.type === 'bytes') {
+    s += pad + '<span class="type">bytes</span>(' + item.len + ') <span class="val">' + item.value + '</span>\n';
+  } else if (item.type === 'text') {
+    s += pad + '<span class="type">text</span> <span class="val">"' + escapeHtml(item.value) + '"</span>\n';
+  } else if (item.type === 'array') {
+    s += pad + '<span class="type">array</span>(' + item.len + ')\n';
+    for (var i = 0; i < item.value.length; i++) {
+      s += renderItem(item.value[i], depth + 1);
+    }
+  } else if (item.type === 'map') {
+    s += pad + '<span class="type">map</span>(' + item.len + ')\n';
+    for (var i = 0; i < item.value.length; i++) {
+      s += pad + '  <span class="key">' + formatKey(item.value[i].key) + '</span>:\n';
+      s += renderItem(item.value[i].val, depth + 2);
+    }
+  } else if (item.type === 'tag') {
+    s += pad + '<span class="type">tag</span>(' + item.tag + ')\n';
+    s += renderItem(item.value, depth + 1);
+  } else if (item.type === 'simple') {
+    s += pad + '<span class="type">simple</span> <span class="val">' + item.value + '</span>\n';
+  } else if (item.type === 'float') {
+    s += pad + '<span class="type">float</span> <span class="val">' + item.value + '</span>\n';
+  }
+  return s;
+}
+
+function formatKey(item) {
+  if (item.type === 'uint' || item.type === 'nint') return item.value;
+  if (item.type === 'text') return '"' + escapeHtml(item.value) + '"';
+  if (item.type === 'bytes') return 'h\'' + item.value + '\'';
+  return item.type;
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function decodeCbor() {
+  var hex = document.getElementById('hex-input').value.trim();
+  var out = document.getElementById('output');
+  if (!hex) { out.innerHTML = 'Paste hex above and click Decode.'; return; }
+  try {
+    var bytes = hexToBytes(hex);
+    var reader = new CborReader(bytes);
+    var result = '';
+    while (reader.remaining() > 0) {
+      var item = decodeCborItem(reader);
+      result += renderItem(item, 0);
+    }
+    out.innerHTML = result || '<span class="err">Empty input</span>';
+  } catch (e) {
+    out.innerHTML = '<span class="err">Error: ' + escapeHtml(e.message) + '</span>';
+  }
+}
+
+function clearAll() {
+  document.getElementById('hex-input').value = '';
+  document.getElementById('output').innerHTML = 'Paste hex above and click Decode.';
+}
+
+// Decode on Enter
+document.getElementById('hex-input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); decodeCbor(); }
+});
+</script>
+
+</body>
+</html>

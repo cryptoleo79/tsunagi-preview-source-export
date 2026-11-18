@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The TSUNAGI Manifesto</title>
+<meta name="description" content="The TSUNAGI Manifesto — Deterministic infrastructure for an uncertain world. Engineering philosophy behind the TSUNAGI Cardano node.">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #05080e;
+  --bg-surface: #0a0f1a;
+  --border: rgba(80,120,180,0.12);
+  --border-accent: rgba(80,140,220,0.35);
+  --text: #c8ced8;
+  --text-h: #e8ecf2;
+  --text-m: #7a8598;
+  --text-d: #4c5668;
+  --accent: #3d6fa8;
+  --accent-l: #5a8ec8;
+  --white: #eceef3;
+  --mono: 'SF Mono','Cascadia Code','Fira Code','Consolas',monospace;
+  --sans: -apple-system,BlinkMacSystemFont,'Segoe UI','Inter',Helvetica,Arial,sans-serif;
+  --serif: 'Charter','Georgia','Cambria','Times New Roman',serif;
+}
+html { scroll-behavior: smooth; }
+body { font-family: var(--serif); background: var(--bg); color: var(--text); line-height: 1.85; font-size: 17px; overflow-x: hidden; }
+
+.ub { position:fixed; top:0; left:0; right:0; z-index:100; height:48px; display:flex; align-items:center; justify-content:space-between; padding:0 28px; background:rgba(5,8,14,0.92); backdrop-filter:blur(14px); border-bottom:1px solid var(--border); }
+.ub-l { display:flex; align-items:center; gap:20px; }
+.ub-brand { font-family:var(--sans); font-size:0.82rem; font-weight:700; letter-spacing:0.14em; color:var(--white); text-decoration:none; }
+.ub-nav { display:flex; gap:6px; flex-wrap:wrap; }
+.ub-nav a { font-family:var(--sans); font-size:0.75rem; font-weight:500; letter-spacing:0.03em; color:var(--text-m); text-decoration:none; padding:5px 12px; border-radius:4px; border:1px solid transparent; transition:all 0.2s; }
+.ub-nav a:hover { color:var(--white); border-color:var(--border-accent); background:rgba(60,112,180,0.08); }
+.lang-switch { display:flex; align-items:center; gap:6px; margin-left:12px; font-family:var(--sans); font-size:0.75rem; white-space:nowrap; }
+.lang-switch a { text-decoration:none; color:var(--text-m); transition:color 0.2s ease; }
+.lang-switch a:hover { color:var(--text); }
+.lang-cur { color:var(--accent-l) !important; font-weight:600; }
+.lang-div { opacity:0.4; }
+
+.pg { max-width:700px; margin:0 auto; padding:80px 28px 60px; }
+
+.tb { text-align:center; padding:80px 0 56px; border-bottom:1px solid var(--border); margin-bottom:56px; }
+.tb h1 { font-size:2.4rem; font-weight:700; color:var(--white); letter-spacing:0.04em; margin-bottom:12px; }
+.tb .st { font-size:1.1rem; color:var(--text-m); font-style:italic; margin-bottom:32px; line-height:1.6; }
+.tb .mt { font-family:var(--sans); font-size:0.82rem; color:var(--text-d); letter-spacing:0.03em; }
+
+h2 { font-size:1.35rem; font-weight:700; color:var(--text-h); margin:52px 0 20px; padding-bottom:10px; border-bottom:1px solid var(--border); }
+p { margin-bottom:18px; text-align:justify; hyphens:auto; }
+strong { color:var(--text-h); }
+.pg a { color:var(--accent-l); text-decoration:none; border-bottom:1px solid rgba(90,142,200,0.3); }
+.pg a:hover { border-color:var(--accent-l); }
+hr { border:none; border-top:1px solid var(--border); margin:52px 0; }
+
+/* Motto highlight */
+.motto-block { text-align:center; padding:32px 0; margin:32px 0; }
+.motto-block p { font-size:1.3rem; font-weight:600; color:var(--white); font-style:italic; text-align:center; margin:0; }
+
+.closing { text-align:center; padding:40px 0; margin-top:40px; }
+.closing p { text-align:center; font-size:1.1rem; color:var(--text-m); margin-bottom:12px; }
+.closing .motto { font-size:1.3rem; font-weight:600; color:var(--white); font-style:italic; }
+
+.ft { text-align:center; padding:40px 0 32px; border-top:1px solid var(--border); margin-top:60px; }
+.ft p { font-family:var(--sans); font-size:0.78rem; color:var(--text-d); text-align:center; letter-spacing:0.03em; }
+.ft .fm { font-size:0.88rem; color:var(--text-m); font-weight:600; margin-bottom:8px; }
+
+@media(max-width:768px){ body{font-size:16px;} .pg{padding:70px 18px 40px;} .tb h1{font-size:1.8rem;} .tb{padding:50px 0 36px;} h2{font-size:1.2rem;} .ub{padding:0 16px;} .ub-nav a{padding:5px 8px;font-size:0.7rem;} }
+@media(max-width:480px){ body{font-size:15px;} .tb h1{font-size:1.5rem;} .pg{padding:64px 14px 32px;} .ub-brand{font-size:0.75rem;} }
+</style>
+</head>
+<body>
+
+<!-- Utility Bar (shared) -->
+<div id="nav-container"></div>
+<script src="/assets/nav.js"></script>
+
+<div class="pg">
+
+<div class="tb">
+  <h1>The TSUNAGI Manifesto</h1>
+  <div class="st">Deterministic Infrastructure for an Uncertain World</div>
+  <div class="mt">ASY</div>
+</div>
+
+<h2>1. The Problem of Infrastructure Monoculture</h2>
+
+<p>Decentralized networks are defined by the principle that no single entity controls the system. Yet in practice, most blockchain networks depend on a single dominant node implementation. Every validator, every relay, every block producer runs the same binary, compiled from the same source, carrying the same assumptions, the same optimizations, and the same defects.</p>
+
+<p>This is infrastructure monoculture, and it is the quiet contradiction at the center of decentralization.</p>
+
+<p>When every node shares the same codebase, a single bug does not affect one operator &mdash; it affects the entire network simultaneously. A memory corruption in the state machine does not produce a localized failure that the network routes around. It produces a correlated failure across every node at the same block height. A performance regression does not slow one validator &mdash; it degrades the throughput of the whole chain. An ambiguity in the protocol specification does not surface through disagreement between implementations &mdash; it hides, unexamined, inside the single interpretation that everyone runs.</p>
+
+<p>Monoculture also produces operational opacity. When every operator runs the same software, the diagnostic surface is shaped by the assumptions of the original development team. Alternative perspectives on observability, error handling, and operational workflow never emerge because there is no independent implementation to propose them.</p>
+
+<p>Implementation diversity is not a luxury. It is structural resilience. A network with multiple independent implementations confirms its protocol through disagreement: when two implementations, derived independently from the same specification, produce identical state transitions across millions of blocks, the protocol is validated more deeply than any formal proof in isolation can achieve. TSUNAGI exists because Cardano deserves this validation.</p>
+
+<hr>
+
+<h2>2. Determinism as a Design Principle</h2>
+
+<p>A system that behaves differently under identical conditions cannot be trusted. Trust requires predictability, and predictability requires determinism.</p>
+
+<p>TSUNAGI is built on the principle that deterministic behavior is a prerequisite for trust. Identical inputs must produce identical outputs &mdash; not most of the time, not under normal conditions, but always, on every machine, in every execution context. This is not an aspiration. It is an invariant enforced through architectural decisions at every layer of the system.</p>
+
+<p>No global mutable state. No hidden configuration read from the environment below the integration boundary. No implicit allocations from a shared heap. No control flow that diverges based on timing, thread scheduling, or garbage collector behavior. Every function receives its dependencies through explicit parameters. Every error is represented in the return type. Every allocation passes through a caller-provided allocator that can be inspected, constrained, and tested.</p>
+
+<p>The consequence of determinism is that systems can explain themselves. A deterministic state machine does not produce mysterious behavior that requires forensic analysis. It produces behavior that is a pure function of its inputs &mdash; behavior that can be reproduced, compared, and verified by anyone with the same inputs and the same code. When something goes wrong, determinism transforms diagnosis from archaeology into arithmetic: replay the inputs, observe the outputs, locate the divergence.</p>
+
+<p>Determinism is not a feature of TSUNAGI. It is the foundation on which every other feature is built.</p>
+
+<hr>
+
+<h2>3. Let It Run. Let It Resolve.</h2>
+
+<div class="motto-block"><p>Let It Run. Let It Resolve.</p></div>
+
+<p>This is the operational philosophy of TSUNAGI.</p>
+
+<p>Infrastructure should not require constant human attention to maintain correctness. Systems should run. Processes should resolve their own failures. When degradation occurs, the system should detect it, contain it, and recover from it before an operator needs to intervene. The operator's role is oversight, not life support.</p>
+
+<p>This philosophy is not about removing humans from the loop. It is about building systems that earn the trust required to run unattended. A node that cannot explain its own health cannot be trusted to run overnight. A node that halts on every transient failure cannot be trusted to run through a network partition. A node that requires external scripts to detect basic degradation has externalized its own responsibility.</p>
+
+<p>TSUNAGI embodies this philosophy through layered self-awareness. The shadow ledger verifies the primary pipeline on every block without human initiation. The LMDB fallback path maintains forward progress when persistent storage encounters coverage gaps. The observability stack evaluates health conditions, identifies degradation, and in defined cases executes automated stabilization. The artifact management layer detects stale state and refreshes it before staleness affects downstream peers.</p>
+
+<p>Let it run. Let it resolve. Intervene only when the system has exhausted its own capacity to heal.</p>
+
+<hr>
+
+<h2>4. Self-Healing Infrastructure</h2>
+
+<p>TSUNAGI's operational model follows the BAEY loop: Build, Analyze, Evolve, Yield. The node builds its state through deterministic block processing. It analyzes its own health through structured evaluation. It evolves its operational posture in response to detected conditions. It yields stable, verified output to the network and the operator.</p>
+
+<p>This loop is not external monitoring bolted onto a passive node. It is embedded in the architecture as a first-class concern.</p>
+
+<p>KAGAMI reflects the node's internal state as structured diagnostics &mdash; JSON snapshots, health reports, live telemetry &mdash; without modifying any runtime state. YAMORI evaluates health against configurable thresholds, maintains an event memory of adverse conditions, and engages defensive postures when degradation accumulates. TATE verifies the integrity of propagation artifacts, checking that fragment ancestry is continuous and coverage is sufficient for downstream peers. KURA manages artifact retention, detects staleness, and performs automated stabilization to maintain operational readiness.</p>
+
+<p>Each subsystem is independently invocable, independently testable, and scoped to a specific concern. Together, they form a self-healing layer that operates continuously during normal synchronization, not as an afterthought triggered by failure.</p>
+
+<p>The design principle is simple: a node that understands its own health can protect itself. A node that cannot understand its own health depends on someone else to protect it, and that dependency is a single point of failure in a system designed to have none.</p>
+
+<p>These subsystems form the conceptual layer model that guided the architecture from its earliest design. From top to bottom: <strong>KAGAMI</strong> (mirror &mdash; diagnostics and structured reporting), <strong>YAMORI</strong> (guardian &mdash; integrity monitoring and anomaly detection), <strong>TATE</strong> (shield &mdash; fragment defense and artifact validation), <strong>KURA</strong> (storehouse &mdash; stabilization and self-healing recovery), <strong>TSURUGI</strong> (blade &mdash; protocol engine and chain synchronization), above the deterministic ledger pipeline and LMDB persistent storage. The current implementation maps these concerns onto concrete runtime subsystems described on the <a href="/architecture/">architecture</a> page.</p>
+
+<hr>
+
+<h2>5. Minimalism and Control</h2>
+
+<p>TSUNAGI is written in Zig because infrastructure software benefits from clarity over abstraction.</p>
+
+<p>Zig provides explicit memory ownership without garbage collection. Every allocation has a visible lifetime, a known owner, and a deterministic deallocation point. There are no finalizers that run at unpredictable times, no garbage collector pauses that introduce latency variance, no hidden allocations behind syntactic convenience.</p>
+
+<p>The language compiles to a single static binary with no runtime dependencies beyond the operating system kernel. There is no interpreter to version, no virtual machine to configure, no package manager runtime to secure. The binary's behavior is determined by its source code, its two linked libraries (LMDB and libsodium), and nothing else.</p>
+
+<p>This minimalism is not aesthetic preference. It is an engineering decision with operational consequences. A node with fewer moving parts has fewer failure modes. A binary with no dynamic dependencies cannot fail because a shared library was updated on the host. A language without hidden control flow cannot surprise its operators with behavior that the source code does not describe.</p>
+
+<p>Infrastructure software runs for months. It runs through kernel upgrades, network partitions, disk failures, and operator absences. The software that survives this environment is not the software with the most features. It is the software with the fewest surprises.</p>
+
+<hr>
+
+<h2>6. Infrastructure for Operators</h2>
+
+<p>TSUNAGI is designed for the people who run nodes, not the people who theorize about them.</p>
+
+<p>Stake pool operators maintain infrastructure under real constraints: limited budgets, limited time, limited tolerance for systems that cannot explain themselves. A node that requires external dashboards, custom scripts, and community forum posts to diagnose basic health conditions has failed its operator before it has failed the network.</p>
+
+<p>TSUNAGI's design addresses this directly. Diagnostics are built into the binary. Health evaluation runs as a CLI command, not an external service. Telemetry is structured JSON, not unstructured log lines. The node reports its own tip age, fragment coverage, artifact freshness, and storage health in a format that both humans and automation can consume without parsing heuristics.</p>
+
+<p>The goal is operational clarity: an operator should understand their node's state from the node's own output, without consulting external chain explorers, without correlating timestamps across multiple log files, and without guessing whether a symptom indicates a transient condition or a structural failure.</p>
+
+<hr>
+
+<h2>7. A Platform for Experimentation</h2>
+
+<p>TSUNAGI is not only a node. It is an architecture for experimentation.</p>
+
+<p>The modular pipeline &mdash; with explicit interfaces between delta extraction, state application, undo management, and persistent storage &mdash; permits controlled substitution. A researcher can replace the storage backend and measure the effect on throughput without modifying the application logic. A developer can inject synthetic block sequences through the replay harness and observe the pipeline's behavior under conditions that the live network may never produce. An engineer can instantiate multiple pipeline instances with different configurations and compare their outputs on identical inputs.</p>
+
+<p>This modularity enables questions that a monolithic implementation cannot easily answer. How does a different B-tree implementation affect UTxO lookup latency? What is the memory profile of the undo stack under sustained rollback sequences? How does the pipeline behave when the storage backend introduces artificial latency? Each question requires substituting one component while holding all others constant &mdash; precisely the experimental methodology that modular architecture enables.</p>
+
+<p>The pipeline's abstract UTxO types &mdash; a consumed input identified by a hash and an index, a produced output pairing that identifier with an address and a value &mdash; describe the fundamental spending model shared by multiple blockchain families. This abstraction positions the pipeline as a reusable component for cross-chain research, not merely a Cardano-specific implementation detail.</p>
+
+<hr>
+
+<h2>8. Independent Implementation Matters</h2>
+
+<p>Every independent implementation of a protocol is a test of the protocol itself.</p>
+
+<p>When a second implementation, derived from the specification rather than from the reference code, produces identical state transitions across thousands of blocks, it provides evidence that the specification is unambiguous and complete for the transitions observed. When the implementations disagree, the disagreement identifies a specification gap, an implementation defect, or both &mdash; information that strengthens the protocol regardless of which implementation is correct.</p>
+
+<p>TSUNAGI is not replacing existing Cardano nodes. It is strengthening the ecosystem by providing an independent verification surface. A network where multiple implementations agree on state transitions is more resilient than a network where a single implementation defines correctness by default. The former has verified its protocol through independent derivation. The latter has assumed its protocol is correct because no one has tested the assumption.</p>
+
+<hr>
+
+<h2>9. The Path Forward</h2>
+
+<p>TSUNAGI is an engineering project in active development. The architecture described here is operational on the Cardano preview network and under continuous validation. The path forward extends this foundation in several directions.</p>
+
+<p>Extended mainnet validation will broaden the evidence base from preview-network transaction volumes to production-scale block processing, larger UTxO sets, and longer operational durations. Infrastructure tooling will lower the barrier for operators adopting TSUNAGI as relay infrastructure. Ecosystem collaboration will connect TSUNAGI's verification capabilities with other independent implementation efforts in the Cardano community. Research into deterministic blockchain infrastructure will explore how the principles demonstrated here &mdash; modular pipelines, shadow verification, self-healing observability &mdash; apply beyond Cardano to the broader challenge of building trustworthy decentralized systems.</p>
+
+<p>This is open engineering. The questions are real, the methodology is disciplined, and the results are measured rather than assumed.</p>
+
+<hr>
+
+<h2>10. Closing Statement</h2>
+
+<p>TSUNAGI exists because infrastructure should be understood, not merely operated. Because decentralized networks deserve the resilience that only implementation diversity provides. Because operators deserve nodes that explain themselves. Because deterministic behavior is not an optimization &mdash; it is the minimum standard for systems that hold value on behalf of others.</p>
+
+<div class="closing">
+  <p class="motto">Let It Run. Let It Resolve.</p>
+  <p>Deterministic systems build trustworthy infrastructure.</p>
+</div>
+
+<div class="ft">
+  <p class="fm">Let It Run. Let It Resolve.</p>
+  <p>tsunagi.tech &middot; Independent Cardano infrastructure research &middot; 2026</p>
+</div>
+
+</div>
+
+</body>
+</html>

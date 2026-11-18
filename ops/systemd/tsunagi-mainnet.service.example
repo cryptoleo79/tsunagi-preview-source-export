@@ -1,0 +1,64 @@
+# Example hardened systemd user service for Tsunagi
+# Copy to: ~/.config/systemd/user/tsunagi-mainnet.service
+# Then run:
+#   systemctl --user daemon-reload
+#   systemctl --user enable tsunagi-mainnet.service
+#   systemctl --user start tsunagi-mainnet.service
+
+[Unit]
+Description=Tsunagi Node (mainnet)
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+[Service]
+Type=simple
+WorkingDirectory=%h/src/tsunagi-follower/tsunagi-node
+
+# === TSUNAGI ENVIRONMENT ===
+Environment=TSUNAGI_HOME=%h/tsunagi-home-mainnet
+Environment=TSUNAGI_CAPTURE=1
+Environment=TSUNAGI_LMDB=%h/tsunagi-home-mainnet/lmdb
+Environment=TSUNAGI_LMDB_TRUTH=0
+Environment=TSUNAGI_LMDB_AUTHORITY=0
+Environment=TSUNAGI_METRICS=1
+Environment=TSUNAGI_CAPTURE_ROTATE_MB=16
+# Convergence mode:
+# 16MB rotates quickly to feed backfill and raise LMDB coverage.
+# After convergence, raise to 64–256MB to reduce churn.
+# Environment=TSUNAGI_MODE=lmdb_native  # Enable once LMDB convergence is reached
+
+# === RUN ===
+ExecStart=%h/src/tsunagi-follower/tsunagi-node/zig-out/bin/tsunagi-node run --net mainnet --lang en
+
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=10
+KillSignal=SIGINT
+SendSIGKILL=yes
+
+# === RESOURCE LIMITS ===
+MemoryMax=4G
+CPUQuota=250%
+Nice=5
+LimitNOFILE=65535
+
+# === SECURITY HARDENING ===
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=%h/tsunagi-home-mainnet
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictNamespaces=true
+SystemCallArchitectures=native
+
+# === LOGGING ===
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

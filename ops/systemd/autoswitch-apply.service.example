@@ -1,0 +1,11 @@
+[Unit]
+Description=Tsunagi AutoSwitch Apply (checks convergence marker)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/src/tsunagi-follower/tsunagi-node
+Environment=TSUNAGI_HOME=%h/tsunagi-home-mainnet
+Environment=TSUNAGI_AUTOSWITCH=1
+ExecStart=%h/src/tsunagi-follower/tsunagi-node/zig-out/bin/tsunagi-node autoswitch-apply

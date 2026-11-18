@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Slot Observatory — TSUNAGI Labs</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+--bg:#05080e;--bg-surface:#0a0f1a;--bg-card:rgba(12,18,30,0.65);
+--border:rgba(80,120,180,0.10);--border-hover:rgba(80,120,180,0.28);
+--border-accent:rgba(80,140,220,0.35);
+--text:#d0d6e2;--text-m:#7a8598;--text-d:#4c5668;
+--accent:#3d6fa8;--accent-l:#5a8ec8;--white:#eceef3;
+--green:#3da86f;--amber:#a89b3d;
+--mono:'SF Mono','Cascadia Code','Fira Code','Consolas',monospace;
+--sans:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter',Helvetica,Arial,sans-serif;
+}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh;}
+
+.ub{position:fixed;top:0;left:0;right:0;z-index:100;height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;background:rgba(5,8,14,0.92);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);}
+.ub-l{display:flex;align-items:center;gap:20px;}
+.ub-brand{font-size:0.82rem;font-weight:700;letter-spacing:0.14em;color:var(--white);text-decoration:none;}
+.ub-nav{display:flex;gap:6px;flex-wrap:wrap;}
+.ub-nav a{font-size:0.75rem;font-weight:500;letter-spacing:0.03em;color:var(--text-m);text-decoration:none;padding:5px 12px;border-radius:4px;border:1px solid transparent;transition:all 0.2s;}
+.ub-nav a:hover{color:var(--white);border-color:var(--border-accent);background:rgba(60,112,180,0.08);}
+
+.pg{max-width:960px;margin:0 auto;padding:80px 28px 60px;}
+
+.hdr{text-align:center;margin-bottom:36px;}
+.hdr h1{font-size:1.5rem;font-weight:700;color:var(--white);letter-spacing:0.04em;margin-bottom:8px;}
+.hdr p{font-size:0.85rem;color:var(--text-m);}
+
+.summary{display:flex;gap:14px;margin-bottom:28px;flex-wrap:wrap;}
+.sum-card{flex:1;min-width:120px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:14px 16px;text-align:center;}
+.sum-label{font-family:var(--mono);font-size:0.58rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-d);margin-bottom:4px;}
+.sum-val{font-family:var(--mono);font-size:1.1rem;font-weight:700;color:var(--white);}
+
+.section-label{font-family:var(--mono);font-size:0.62rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--accent-l);margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+
+.so-table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:0.78rem;}
+.so-table th{font-size:0.6rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-d);text-align:right;padding:7px 10px;border-bottom:1px solid var(--border);}
+.so-table th:first-child{text-align:left;}
+.so-table td{padding:6px 10px;border-bottom:1px solid rgba(80,120,180,0.06);color:var(--text);text-align:right;}
+.so-table td:first-child{text-align:left;color:var(--accent-l);}
+.so-table tr:hover td{background:rgba(60,112,180,0.04);}
+.so-gap-zero{color:var(--green);}
+.so-gap-high{color:var(--amber);}
+.so-empty{font-size:0.85rem;color:var(--text-d);padding:20px 0;}
+
+.refresh-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}
+.refresh-ind{font-family:var(--mono);font-size:0.65rem;color:var(--text-d);}
+.refresh-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);margin-right:6px;animation:pulse 2s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
+
+.ft{text-align:center;padding:40px 0 32px;border-top:1px solid var(--border);margin-top:48px;}
+.ft p{font-size:0.78rem;color:var(--text-d);letter-spacing:0.03em;}
+
+@media(max-width:768px){.ub-nav{display:none;}.pg{padding:70px 18px 40px;}.summary{flex-direction:column;}}
+</style>
+</head>
+<body>
+
+<div class="ub">
+  <div class="ub-l"><a href="/" class="ub-brand">TSUNAGI</a></div>
+  <nav class="ub-nav">
+    <a href="/">Home</a>
+    <a href="/explorer/">Explorer</a>
+    <a href="/decode/">Decode</a>
+    <a href="/status/">Status</a>
+    <a href="/labs/">Labs</a>
+  </nav>
+</div>
+
+<div class="pg">
+
+  <div class="hdr">
+    <h1>Slot Observatory</h1>
+    <p>Chain rhythm observation &mdash; block arrivals and inter-block gaps</p>
+  </div>
+
+  <div class="summary">
+    <div class="sum-card">
+      <div class="sum-label">Latest Slot</div>
+      <div class="sum-val" id="so-slot">&mdash;</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-label">Latest Block</div>
+      <div class="sum-val" id="so-block">&mdash;</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-label">Latest Gap</div>
+      <div class="sum-val" id="so-gap">&mdash;</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-label">Avg Gap</div>
+      <div class="sum-val" id="so-avg">&mdash;</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-label">Observations</div>
+      <div class="sum-val" id="so-count">&mdash;</div>
+    </div>
+  </div>
+
+  <!-- Recent Observations -->
+  <div class="refresh-bar">
+    <div class="section-label" style="margin-bottom:0;padding-bottom:0;border-bottom:none;">Recent Observations</div>
+    <div class="refresh-ind"><span class="refresh-dot"></span>Auto-refresh 10s</div>
+  </div>
+
+  <p class="so-empty" id="so-empty">Waiting for slot observation data&hellip;</p>
+  <table class="so-table" id="so-table" style="display:none;">
+    <thead>
+      <tr>
+        <th>Slot</th>
+        <th>Block</th>
+        <th>Kind</th>
+        <th>Gap</th>
+        <th>Observed</th>
+      </tr>
+    </thead>
+    <tbody id="so-tbody"></tbody>
+  </table>
+
+  <div class="ft">
+    <p>tsunagi.tech &middot; Slot Observatory</p>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  function formatGap(g) {
+    if (g === null || g === undefined) return '\u2014';
+    return String(g);
+  }
+
+  function gapClass(g) {
+    if (g === null || g === undefined) return '';
+    if (g === 0) return 'so-gap-zero';
+    if (g >= 5) return 'so-gap-high';
+    return '';
+  }
+
+  function formatKind(k) {
+    if (!k) return '\u2014';
+    return k.replace(/_/g, ' ');
+  }
+
+  function formatTime(iso) {
+    if (!iso) return '\u2014';
+    try {
+      var d = new Date(iso);
+      var hh = String(d.getUTCHours()).padStart(2,'0');
+      var mm = String(d.getUTCMinutes()).padStart(2,'0');
+      var ss = String(d.getUTCSeconds()).padStart(2,'0');
+      return hh + ':' + mm + ':' + ss + ' UTC';
+    } catch(e) { return iso; }
+  }
+
+  function update() {
+    fetch('/data/slot-observatory.json?_=' + Date.now())
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      document.getElementById('so-slot').textContent = d.latest_slot != null ? d.latest_slot : '\u2014';
+      document.getElementById('so-block').textContent = d.latest_block != null ? d.latest_block : '\u2014';
+      document.getElementById('so-gap').textContent = d.latest_gap != null ? d.latest_gap : '\u2014';
+      document.getElementById('so-avg').textContent = d.avg_gap != null ? d.avg_gap : '\u2014';
+      document.getElementById('so-count').textContent = d.observation_count != null ? d.observation_count : '\u2014';
+
+      var observations = d.recent_observations || [];
+      var table = document.getElementById('so-table');
+      var empty = document.getElementById('so-empty');
+      var tbody = document.getElementById('so-tbody');
+
+      if (observations.length === 0) {
+        table.style.display = 'none';
+        empty.style.display = 'block';
+      } else {
+        table.style.display = 'table';
+        empty.style.display = 'none';
+        tbody.innerHTML = '';
+        for (var i = 0; i < observations.length; i++) {
+          var o = observations[i];
+          var tr = document.createElement('tr');
+          var gc = gapClass(o.gap_from_prev_block);
+          tr.innerHTML =
+            '<td>' + (o.slot != null ? o.slot : '\u2014') + '</td>' +
+            '<td>' + (o.block != null ? o.block : '\u2014') + '</td>' +
+            '<td>' + formatKind(o.kind) + '</td>' +
+            '<td' + (gc ? ' class="' + gc + '"' : '') + '>' + formatGap(o.gap_from_prev_block) + '</td>' +
+            '<td>' + formatTime(o.observed_at) + '</td>';
+          tbody.appendChild(tr);
+        }
+      }
+    })
+    .catch(function(){});
+  }
+
+  update();
+  setInterval(update, 10000);
+})();
+</script>
+
+</body>
+</html>

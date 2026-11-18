@@ -1,0 +1,20 @@
+# Tsunagi LMDB incremental backfill (oneshot, triggered by timer)
+#
+# Adjust paths to match your deployment, then:
+#   cp lmdb-backfill.service.example ~/.config/systemd/user/lmdb-backfill.service
+#   cp lmdb-backfill.timer.example   ~/.config/systemd/user/lmdb-backfill.timer
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now lmdb-backfill.timer
+
+[Unit]
+Description=Tsunagi LMDB incremental backfill
+After=network.target
+
+[Service]
+Type=oneshot
+# TSUNAGI_HOME must match the node service so cursor + stats bridge align
+Environment=TSUNAGI_HOME=%h/tsunagi-home-mainnet
+ExecStart=%h/src/tsunagi-follower/tsunagi-node/zig-out/bin/tsunagi-node lmdb-backfill-inc \
+    --dir %h/tsunagi-home-mainnet/captures \
+    --lmdb %h/tsunagi-home-mainnet/lmdb
+TimeoutStartSec=120

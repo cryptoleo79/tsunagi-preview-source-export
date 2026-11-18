@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Tsunagi autoswitch apply every 5 minutes
+
+[Timer]
+OnCalendar=*:0/5
+Persistent=true
+Unit=autoswitch-apply.service
+
+[Install]
+WantedBy=timers.target

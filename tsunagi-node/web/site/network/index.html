@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TSUNAGI Network</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#05080e;--bg-surface:#0a0f1a;--bg-card:rgba(12,18,30,0.65);
+  --bg-card-hl:rgba(14,22,38,0.75);--border:rgba(80,120,180,0.10);
+  --border-hover:rgba(80,120,180,0.28);--border-accent:rgba(80,140,220,0.35);
+  --text:#d0d6e2;--text-m:#7a8598;--text-d:#4c5668;
+  --accent:#3d6fa8;--accent-l:#5a8ec8;--white:#eceef3;
+  --green:#3da86f;--green-bg:rgba(61,168,111,0.08);--green-border:rgba(61,168,111,0.20);
+  --amber:#a89b3d;--amber-bg:rgba(168,155,61,0.08);--amber-border:rgba(168,155,61,0.20);
+  --red:#a83d3d;--red-bg:rgba(168,61,61,0.08);--red-border:rgba(168,61,61,0.20);
+  --mono:'SF Mono','Cascadia Code','Fira Code','Consolas',monospace;
+  --sans:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter',Helvetica,Arial,sans-serif;
+}
+html{background:var(--bg);color:var(--text);font-family:var(--sans);-webkit-font-smoothing:antialiased;}
+body{min-height:100vh;line-height:1.7;}
+
+/* Utility Bar */
+.ub{position:fixed;top:0;left:0;right:0;z-index:100;height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;background:rgba(5,8,14,0.92);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);}
+.ub-l{display:flex;align-items:center;gap:20px;}
+.ub-brand{font-size:0.82rem;font-weight:700;letter-spacing:0.14em;color:var(--white);text-decoration:none;}
+.ub-nav{display:flex;gap:6px;flex-wrap:wrap;}
+.ub-nav a{font-size:0.75rem;font-weight:500;letter-spacing:0.03em;color:var(--text-m);text-decoration:none;padding:5px 12px;border-radius:4px;border:1px solid transparent;transition:all 0.2s;}
+.ub-nav a:hover{color:var(--white);border-color:var(--border-accent);background:rgba(60,112,180,0.08);}
+.lang-switch{display:flex;align-items:center;gap:6px;margin-left:12px;font-size:0.75rem;white-space:nowrap;}
+.lang-switch a{text-decoration:none;color:var(--text-m);transition:color 0.2s ease;}
+.lang-switch a:hover{color:var(--text);}
+.lang-cur{color:var(--accent-l) !important;font-weight:600;}
+.lang-div{opacity:0.4;}
+
+/* Page Container */
+.pg{max-width:960px;margin:0 auto;padding:80px 28px 60px;}
+
+/* Title Block */
+.title-block{text-align:center;margin-bottom:36px;}
+.title-block h1{font-size:1.6rem;font-weight:700;color:var(--white);letter-spacing:0.04em;margin-bottom:8px;}
+.title-block p{font-size:0.92rem;color:var(--text-m);letter-spacing:0.02em;}
+
+/* Notice Card */
+.notice{background:var(--bg-card);border:1px solid var(--border-accent);border-left:3px solid var(--accent);border-radius:8px;padding:24px 28px;margin-bottom:36px;}
+.notice-title{font-family:var(--mono);font-size:0.65rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent-l);margin-bottom:10px;}
+.notice-text{font-size:0.92rem;color:var(--text-m);line-height:1.8;}
+
+/* Section Label */
+.section-label{font-family:var(--mono);font-size:0.62rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-d);margin:32px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+
+/* Card Base */
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:22px 20px;backdrop-filter:blur(12px);transition:border-color 0.25s,opacity 0.25s;position:relative;overflow:hidden;}
+.card:hover{border-color:var(--border-hover);}
+.card::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:0;transition:opacity 0.25s;}
+.card:hover::after{opacity:0.6;}
+
+/* Card Grid */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px;}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:24px;}
+
+/* Link Card */
+.link-card{text-decoration:none;display:block;}
+.link-card .card-title{font-size:0.95rem;font-weight:600;color:var(--white);margin-bottom:8px;}
+.link-card .card-text{font-size:0.82rem;color:var(--text-m);line-height:1.7;}
+.link-card:hover .card-title{color:var(--accent-l);}
+
+/* Card Values (Future Dashboard) */
+.card-label{font-family:var(--mono);font-size:0.62rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-d);margin-bottom:10px;}
+.card-value{font-family:var(--mono);font-size:1.15rem;font-weight:600;color:var(--white);}
+
+/* Future Cards */
+.card-future{opacity:0.45;border-style:dashed;}
+.card-future:hover{opacity:0.6;}
+.card-future-label{font-family:var(--mono);font-size:0.55rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-d);position:absolute;top:8px;right:10px;}
+
+/* Future Section Subtitle */
+.section-subtitle{font-size:0.85rem;color:var(--text-m);margin-bottom:18px;letter-spacing:0.01em;}
+
+/* Content Text */
+.content p{font-size:0.92rem;color:var(--text);line-height:1.85;margin-bottom:16px;}
+
+/* Footer */
+.ft{text-align:center;padding:40px 0 32px;border-top:1px solid var(--border);margin-top:48px;}
+.ft p{font-size:0.78rem;color:var(--text-d);text-align:center;letter-spacing:0.03em;}
+.ft .fm{font-size:0.88rem;color:var(--text-m);font-weight:600;margin-bottom:8px;}
+
+/* Responsive */
+@media(max-width:768px){
+  .grid-3{grid-template-columns:1fr 1fr;}
+  .title-block h1{font-size:1.3rem;}
+}
+@media(max-width:480px){
+  .grid-2,.grid-3{grid-template-columns:1fr;}
+  .title-block h1{font-size:1.15rem;}
+  .title-block p{font-size:0.84rem;}
+  .ub{padding:0 14px;}
+  .pg{padding:68px 16px 40px;}
+  .notice{padding:18px 18px;}
+}
+</style>
+</head>
+<body>
+
+<!-- Utility Bar (shared) -->
+<div id="nav-container"></div>
+<script src="/assets/nav.js"></script>
+
+<div class="pg">
+
+  <!-- Title Block -->
+  <div class="title-block">
+    <h1>TSUNAGI Network</h1>
+    <p>Observability for independent node infrastructure</p>
+  </div>
+
+  <!-- Current State Notice -->
+  <div class="notice">
+    <div class="notice-title">Current State</div>
+    <div class="notice-text">
+      Public multi-node telemetry is not yet active. This page is a foundation for future
+      TSUNAGI network monitoring. The goal is to aggregate health and telemetry data from
+      multiple independent TSUNAGI nodes as they come online. What you see below reflects
+      the infrastructure that exists today and the direction this page will evolve toward.
+    </div>
+  </div>
+
+  <!-- Current Foundation -->
+  <div class="section-label">Current Foundation</div>
+  <div class="grid-2">
+    <a href="/status/" class="link-card">
+      <div class="card">
+        <div class="card-title">Single Public Node</div>
+        <div class="card-text">Preview network node actively following and decoding Cardano blocks</div>
+      </div>
+    </a>
+    <a href="/explorer/" class="link-card">
+      <div class="card">
+        <div class="card-title">Block Explorer</div>
+        <div class="card-text">Real-time block decode telemetry and ledger activity</div>
+      </div>
+    </a>
+    <a href="/decode/" class="link-card">
+      <div class="card">
+        <div class="card-title">Block Decoder</div>
+        <div class="card-text">Deterministic decode pipeline visualization</div>
+      </div>
+    </a>
+    <div class="link-card">
+      <div class="card">
+        <div class="card-title">Runtime Observability</div>
+        <div class="card-text">Structured telemetry via KAGAMI snapshots and journals</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Future Network View -->
+  <div class="section-label">Future Network View</div>
+  <p class="section-subtitle">Planned telemetry aggregation across independent TSUNAGI nodes</p>
+  <div class="grid-3">
+    <div class="card card-future">
+      <span class="card-future-label">FUTURE</span>
+      <div class="card-label">Nodes Reporting</div>
+      <div class="card-value">&mdash;</div>
+    </div>
+    <div class="card card-future">
+      <span class="card-future-label">FUTURE</span>
+      <div class="card-label">Healthy</div>
+      <div class="card-value">&mdash;</div>
+    </div>
+    <div class="card card-future">
+      <span class="card-future-label">FUTURE</span>
+      <div class="card-label">Warning</div>
+      <div class="card-value">&mdash;</div>
+    </div>
+    <div class="card card-future">
+      <span class="card-future-label">FUTURE</span>
+      <div class="card-label">Critical</div>
+      <div class="card-value">&mdash;</div>
+    </div>
+    <div class="card card-future">
+      <span class="card-future-label">FUTURE</span>
+      <div class="card-label">Avg Tip Age</div>
+      <div class="card-value">&mdash;</div>
+    </div>
+    <div class="card card-future">
+      <span class="card-future-label">FUTURE</span>
+      <div class="card-label">Avg Coverage</div>
+      <div class="card-value">&mdash;</div>
+    </div>
+  </div>
+
+  <!-- How This Will Work -->
+  <div class="section-label">How This Will Work</div>
+  <div class="content">
+    <p>
+      Future TSUNAGI nodes may expose telemetry via <code>/status.json</code> endpoints,
+      providing a standardized interface for reporting chain tip, health status, coverage
+      metrics, and ledger state.
+    </p>
+    <p>
+      This network page will aggregate data from registered node endpoints, polling each
+      node's <code>/status.json</code> to build a unified view of the TSUNAGI network's
+      operational state.
+    </p>
+    <p>
+      Each participating node reports its current chain tip, overall health status,
+      block coverage percentage, and ledger state summary. This data enables
+      network-wide health monitoring and anomaly detection across all independent
+      TSUNAGI infrastructure.
+    </p>
+    <p>
+      Aggregation across multiple nodes will surface patterns that are invisible from
+      any single node's perspective — enabling detection of chain splits, propagation
+      delays, and coverage gaps across the independent node fleet.
+    </p>
+    <p>
+      No timeline is promised for this evolution. TSUNAGI is infrastructure research,
+      built incrementally as each layer proves itself reliable. The foundation exists;
+      the network view will emerge when there are nodes to aggregate.
+    </p>
+  </div>
+
+  <!-- Footer -->
+  <div class="ft">
+    <p class="fm">Let It Run. Let It Resolve.</p>
+    <p>tsunagi.tech &middot; Independent Cardano infrastructure research</p>
+  </div>
+
+</div>
+
+</body>
+</html>

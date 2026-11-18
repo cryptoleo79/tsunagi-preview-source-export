@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TSUNAGI Dashboard — Live Operator View</title>
+<meta name="description" content="TSUNAGI live operator dashboard: real-time Cardano node telemetry.">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #05080e;
+  --bg-card: rgba(12,18,30,0.65);
+  --border: rgba(80,120,180,0.10);
+  --border-hover: rgba(80,120,180,0.28);
+  --border-accent: rgba(80,140,220,0.35);
+  --text: #d0d6e2;
+  --text-m: #7a8598;
+  --text-d: #4c5668;
+  --accent: #3d6fa8;
+  --accent-l: #5a8ec8;
+  --white: #eceef3;
+  --green: #3da86f;
+  --green-bg: rgba(61,168,111,0.08);
+  --green-border: rgba(61,168,111,0.25);
+  --yellow: #a89b3d;
+  --yellow-bg: rgba(168,155,61,0.08);
+  --yellow-border: rgba(168,155,61,0.25);
+  --red: #a83d3d;
+  --red-bg: rgba(168,61,61,0.08);
+  --red-border: rgba(168,61,61,0.25);
+  --mono: 'SF Mono','Cascadia Code','Fira Code','Consolas',monospace;
+  --sans: -apple-system,BlinkMacSystemFont,'Segoe UI','Inter',Helvetica,Arial,sans-serif;
+}
+html { scroll-behavior: smooth; }
+body { font-family: var(--sans); background: var(--bg); color: var(--text); line-height: 1.6; }
+
+/* ── Utility Bar ── */
+.ub { position:fixed; top:0; left:0; right:0; z-index:100; height:48px; display:flex; align-items:center; justify-content:space-between; padding:0 28px; background:rgba(5,8,14,0.92); backdrop-filter:blur(14px); border-bottom:1px solid var(--border); }
+.ub-l { display:flex; align-items:center; gap:20px; }
+.ub-brand { font-size:0.82rem; font-weight:700; letter-spacing:0.14em; color:var(--white); text-decoration:none; }
+.ub-nav { display:flex; gap:6px; flex-wrap:wrap; }
+.ub-nav a { font-size:0.75rem; font-weight:500; letter-spacing:0.03em; color:var(--text-m); text-decoration:none; padding:5px 12px; border-radius:4px; border:1px solid transparent; transition:all 0.2s; }
+.ub-nav a:hover { color:var(--white); border-color:var(--border-accent); background:rgba(60,112,180,0.08); }
+.lang-switch { display:flex; align-items:center; gap:6px; margin-left:12px; font-size:0.75rem; white-space:nowrap; }
+.lang-switch a { text-decoration:none; color:var(--text-m); transition:color 0.2s ease; }
+.lang-switch a:hover { color:var(--text); }
+.lang-cur { color:var(--accent-l) !important; font-weight:600; }
+.lang-div { opacity:0.4; }
+
+/* ── Layout ── */
+.pg { max-width:1100px; margin:0 auto; padding:80px 28px 60px; }
+
+/* ── Header ── */
+.dash-hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:28px; padding-top:16px; }
+.dash-hdr h1 { font-size:1.5rem; font-weight:700; color:var(--white); letter-spacing:0.04em; }
+.dash-hdr-sub { font-size:0.82rem; color:var(--text-m); }
+.dash-hdr-right { display:flex; align-items:center; gap:12px; }
+.refresh-dot { display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--green); margin-right:6px; animation:pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+.refresh-ind { font-family:var(--mono); font-size:0.65rem; color:var(--text-d); }
+
+/* ── Section Labels ── */
+.section-label { font-family:var(--mono); font-size:0.56rem; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent-l); margin:28px 0 12px; }
+
+/* ── Metric Grid ── */
+.metric-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:14px; }
+.metric { background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:16px 18px; transition:border-color 0.25s; }
+.metric:hover { border-color:var(--border-hover); }
+.metric-label { font-family:var(--mono); font-size:0.54rem; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-d); margin-bottom:6px; }
+.metric-val { font-family:var(--mono); font-size:1.1rem; font-weight:700; color:var(--white); }
+.metric-val.muted { color:var(--text-d); font-weight:400; }
+
+/* ── Pills ── */
+.pill { display:inline-block; font-family:var(--mono); font-size:0.62rem; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; padding:3px 10px; border-radius:4px; }
+.pill-healthy { color:var(--green); background:var(--green-bg); border:1px solid var(--green-border); }
+.pill-warn { color:var(--yellow); background:var(--yellow-bg); border:1px solid var(--yellow-border); }
+.pill-critical { color:var(--red); background:var(--red-bg); border:1px solid var(--red-border); }
+.pill-offline { color:var(--text-d); background:rgba(76,86,104,0.08); border:1px solid rgba(76,86,104,0.25); }
+
+/* ── Links ── */
+.link-grid { display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
+.link-btn { font-size:0.8rem; font-weight:600; letter-spacing:0.03em; padding:8px 20px; border-radius:6px; text-decoration:none; color:var(--accent-l); border:1px solid var(--border-accent); background:transparent; transition:all 0.2s; }
+.link-btn:hover { background:rgba(60,112,180,0.08); color:var(--white); }
+
+/* ── Guardian Preview ── */
+.guardian-preview { background:var(--bg-card); border:1px solid var(--border-accent); border-left:3px solid var(--accent); border-radius:8px; padding:20px 24px; margin-top:12px; }
+.guardian-preview-title { font-family:var(--mono); font-size:0.62rem; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--accent-l); margin-bottom:10px; }
+.guardian-preview-list { list-style:none; padding:0; }
+.guardian-preview-list li { font-size:0.84rem; color:var(--text-m); padding:3px 0; }
+.guardian-preview-list li::before { content:'\2022'; color:var(--accent-l); margin-right:8px; }
+.planned-badge { display:inline-block; font-family:var(--mono); font-size:0.5rem; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--accent-l); background:rgba(60,112,180,0.08); border:1px solid var(--border-accent); border-radius:4px; padding:2px 8px; margin-left:8px; vertical-align:middle; }
+
+/* ── Footer ── */
+.ft { text-align:center; padding:40px 0 32px; border-top:1px solid var(--border); margin-top:48px; }
+.ft p { font-size:0.78rem; color:var(--text-d); letter-spacing:0.03em; }
+.ft .fm { font-size:0.88rem; color:var(--text-m); font-weight:600; margin-bottom:8px; }
+
+/* ── Responsive ── */
+@media(max-width:768px){
+  .pg { padding:70px 18px 40px; }
+  .metric-grid { grid-template-columns:repeat(2,1fr); }
+  .dash-hdr { flex-direction:column; align-items:flex-start; gap:8px; }
+  .ub { padding:0 16px; }
+  .ub-nav { gap:2px; }
+  .ub-nav a { padding:5px 8px; font-size:0.7rem; }
+}
+@media(max-width:480px){
+  .metric-grid { grid-template-columns:1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- Utility Bar (shared) -->
+<div id="nav-container"></div>
+<script src="/assets/nav.js"></script>
+
+<div class="pg">
+
+  <!-- Header -->
+  <div class="dash-hdr">
+    <div>
+      <h1>TSUNAGI Dashboard</h1>
+      <div class="dash-hdr-sub">Live operator view for an independent Cardano node</div>
+    </div>
+    <div class="dash-hdr-right">
+      <span class="pill pill-offline" id="d-status-pill">Offline</span>
+      <div class="refresh-ind"><span class="refresh-dot"></span>Auto-refresh 10s</div>
+      <div class="refresh-ind" id="d-updated">&mdash;</div>
+    </div>
+  </div>
+
+  <!-- Live Status -->
+  <div class="section-label">Live Status</div>
+  <div class="metric-grid">
+    <div class="metric"><div class="metric-label">Network</div><div class="metric-val muted" id="m-net">&mdash;</div></div>
+    <div class="metric"><div class="metric-label">Sync Status</div><div class="metric-val muted" id="m-sync">&mdash;</div></div>
+    <div class="metric"><div class="metric-label">Tip Age</div><div class="metric-val muted" id="m-age">&mdash;</div></div>
+    <div class="metric"><div class="metric-label">Current Slot</div><div class="metric-val muted" id="m-slot">&mdash;</div></div>
+    <div class="metric"><div class="metric-label">Current Block</div><div class="metric-val muted" id="m-block">&mdash;</div></div>
+    <div class="metric"><div class="metric-label">Health</div><div class="metric-val muted" id="m-health">&mdash;</div></div>
+  </div>
+
+  <!-- Forge / Next Leader -->
+  <div class="section-label">Forge &middot; Next Leader Slot</div>
+  <div class="metric-grid">
+    <div class="metric"><div class="metric-label">Ready</div><div class="metric-val muted" id="m-ready">&mdash;</div></div>
+    <div class="metric"><div class="metric-label">Next Slot</div><div class="metric-val muted" id="m-next-slot">&mdash;</div></div>
+    <div class="metric"><div class="metric-label">ETA</div><div class="metric-val muted" id="m-eta">&mdash;</div></div>
+    <div class="metric"><div class="metric-label">Pre-Arm Target</div><div class="metric-val muted" id="m-prearm">&mdash;</div></div>
+  </div>
+
+  <!-- Ledger / Runtime -->
+  <div class="section-label">Ledger / Runtime</div>
+  <div class="metric-grid">
+    <div class="metric"><div class="metric-label">UTxO Estimate</div><div class="metric-val muted" id="m-utxo">&mdash;</div></div>
+    <div class="metric"><div class="metric-label">Primary Mode</div><div class="metric-val muted" id="m-mode">&mdash;</div></div>
+    <div class="metric"><div class="metric-label">Shadow Enabled</div><div class="metric-val muted" id="m-shadow">&mdash;</div></div>
+    <div class="metric"><div class="metric-label">Tx Last Block</div><div class="metric-val muted" id="m-txlast">&mdash;</div></div>
+    <div class="metric"><div class="metric-label">UTxO Delta</div><div class="metric-val muted" id="m-delta">&mdash;</div></div>
+    <div class="metric"><div class="metric-label">Generated At</div><div class="metric-val muted" id="m-gen">&mdash;</div></div>
+  </div>
+
+  <!-- Pipeline -->
+  <div class="section-label">Pipeline</div>
+  <div class="metric-grid">
+    <div class="metric"><div class="metric-label">Blocks Processed</div><div class="metric-val muted" id="m-fwd">&mdash;</div></div>
+    <div class="metric"><div class="metric-label">Rollbacks</div><div class="metric-val muted" id="m-back">&mdash;</div></div>
+    <div class="metric"><div class="metric-label">Tip Hash</div><div class="metric-val muted" id="m-hash" style="font-size:0.68rem;word-break:break-all;">&mdash;</div></div>
+  </div>
+
+  <!-- Recent Blocks -->
+  <div class="section-label">Recent Blocks</div>
+  <div id="d-recent" style="font-family:var(--mono);font-size:0.78rem;color:var(--text-d);">Waiting for block data&hellip;</div>
+
+  <!-- Quick Links -->
+  <div class="section-label">Quick Links</div>
+  <div class="link-grid">
+    <a href="/status/" class="link-btn">Status</a>
+    <a href="/operator/" class="link-btn">Operator</a>
+    <a href="/explorer/" class="link-btn">Explorer</a>
+    <a href="/decode/" class="link-btn">Decode</a>
+    <a href="/guardian/" class="link-btn">Guardian</a>
+    <a href="/project/" class="link-btn">Project</a>
+  </div>
+
+  <!-- Guardian Preview -->
+  <div class="section-label">Guardian <span class="planned-badge">Planned</span></div>
+  <div class="guardian-preview">
+    <div class="guardian-preview-title">Guardian will add</div>
+    <ul class="guardian-preview-list">
+      <li>Guided operations for common operator tasks</li>
+      <li>Bilingual JP/EN command interaction</li>
+      <li>Safe, validated execution workflows</li>
+      <li>Human-readable explanations of node state and decisions</li>
+    </ul>
+  </div>
+
+  <!-- Footer -->
+  <div class="ft">
+    <p class="fm">Let It Run. Let It Resolve.</p>
+    <p>tsunagi.tech &middot; Independent Cardano infrastructure research</p>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  var DASH = '\u2014';
+  var INTERVAL = 10000;
+
+  function el(id) { return document.getElementById(id); }
+  function fmt(v) { return v != null ? v.toLocaleString() : DASH; }
+  function age(s) {
+    if (s == null) return DASH;
+    s = Math.floor(s);
+    if (s < 60) return s + 's';
+    if (s < 3600) return Math.floor(s/60) + 'm ' + (s%60) + 's';
+    return Math.floor(s/3600) + 'h ' + Math.floor((s%3600)/60) + 'm';
+  }
+  function setM(id, val) {
+    var e = el(id);
+    if (!e) return;
+    e.textContent = (val != null && val !== '') ? String(val) : DASH;
+    e.className = 'metric-val' + ((val != null && val !== '') ? '' : ' muted');
+  }
+  function pillClass(s) {
+    if (!s) return 'pill-offline';
+    s = String(s).toLowerCase();
+    if (s === 'healthy') return 'pill-healthy';
+    if (s === 'warn' || s === 'warning') return 'pill-warn';
+    if (s === 'critical') return 'pill-critical';
+    return 'pill-offline';
+  }
+  function ts(iso) {
+    if (!iso) return DASH;
+    try {
+      var d = new Date(iso);
+      var diff = Math.floor((Date.now() - d.getTime()) / 1000);
+      return age(diff < 0 ? 0 : diff) + ' ago';
+    } catch(e) { return iso; }
+  }
+
+  function update(d) {
+    var sync = d.sync || {};
+    var ledger = d.ledger || {};
+    var pipe = d.pipeline || {};
+    var rt = d.runtime || {};
+
+    // Status pill
+    var p = el('d-status-pill');
+    if (p) {
+      var st = sync.status || 'offline';
+      p.textContent = st.charAt(0).toUpperCase() + st.slice(1);
+      p.className = 'pill ' + pillClass(st);
+    }
+
+    // Live status
+    setM('m-net', d.network);
+    setM('m-sync', sync.status ? (sync.status.charAt(0).toUpperCase() + sync.status.slice(1)) : null);
+    setM('m-age', sync.tip_age_seconds != null ? age(sync.tip_age_seconds) : null);
+    setM('m-slot', fmt(sync.slot));
+    setM('m-block', fmt(sync.block));
+    setM('m-health', sync.status ? (sync.status.charAt(0).toUpperCase() + sync.status.slice(1)) : null);
+
+    // Ledger
+    setM('m-utxo', fmt(ledger.utxo_estimate));
+    setM('m-mode', ledger.primary_mode);
+    setM('m-shadow', ledger.shadow_enabled != null ? (ledger.shadow_enabled ? 'Yes' : 'No') : null);
+    setM('m-txlast', fmt(pipe.tx_last_block));
+    setM('m-delta', pipe.utxo_delta != null ? (pipe.utxo_delta > 0 ? '+' + pipe.utxo_delta : String(pipe.utxo_delta)) : null);
+    setM('m-gen', ts(rt.generated_at));
+
+    // Pipeline
+    setM('m-fwd', fmt(pipe.blocks_processed));
+    setM('m-back', fmt(pipe.rollbacks));
+    var h = sync.tip_hash;
+    if (h && h.length > 16) h = h.slice(0,8) + '\u2026' + h.slice(-8);
+    setM('m-hash', h);
+
+    // Forge / next leader slot — sourced from live node /status/full meta + prearm.
+    // Fields show DASH when the published JSON does not yet include them.
+    var meta = d.meta || {};
+    var prearm = d.prearm || {};
+    setM('m-ready', meta.ready != null ? (meta.ready ? 'Yes' : 'No') : null);
+    setM('m-next-slot', d.next_slot != null ? fmt(d.next_slot) : null);
+    setM('m-eta', d.eta_sec != null ? age(d.eta_sec) : null);
+    setM('m-prearm', prearm.target_slot != null ? fmt(prearm.target_slot) : null);
+
+    // Updated
+    el('d-updated').textContent = rt.generated_at ? ts(rt.generated_at) : DASH;
+  }
+
+  function updateRecent(d) {
+    var c = el('d-recent');
+    if (!c) return;
+    var blocks = (d && d.recent) ? d.recent.slice(0, 5) : [];
+    if (blocks.length === 0) { c.textContent = 'No recent blocks'; return; }
+    var html = '<div style="display:grid;grid-template-columns:auto auto 1fr;gap:4px 14px;">';
+    html += '<div style="font-size:0.54rem;color:var(--text-d);text-transform:uppercase;letter-spacing:0.08em;">Block</div>';
+    html += '<div style="font-size:0.54rem;color:var(--text-d);text-transform:uppercase;letter-spacing:0.08em;">Slot</div>';
+    html += '<div style="font-size:0.54rem;color:var(--text-d);text-transform:uppercase;letter-spacing:0.08em;">Hash</div>';
+    for (var i = 0; i < blocks.length; i++) {
+      var b = blocks[i];
+      var bh = b.hash || ''; if (bh.length > 16) bh = bh.slice(0,8) + '\u2026' + bh.slice(-8);
+      html += '<div style="color:var(--white);">' + fmt(b.block_no) + '</div>';
+      html += '<div style="color:var(--text-m);">' + fmt(b.slot) + '</div>';
+      html += '<div style="color:var(--text-d);font-size:0.72rem;">' + bh + '</div>';
+    }
+    html += '</div>';
+    c.innerHTML = html;
+  }
+
+  function refresh() {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', '/data/status.json?t=' + Date.now(), true);
+    xhr.timeout = 8000;
+    xhr.onload = function() {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try { update(JSON.parse(xhr.responseText)); } catch(e) {}
+      }
+    };
+    xhr.send();
+    var xhr2 = new XMLHttpRequest();
+    xhr2.open('GET', '/data/recent-blocks.json?t=' + Date.now(), true);
+    xhr2.timeout = 8000;
+    xhr2.onload = function() {
+      if (xhr2.status >= 200 && xhr2.status < 300) {
+        try { updateRecent(JSON.parse(xhr2.responseText)); } catch(e) {}
+      }
+    };
+    xhr2.send();
+  }
+
+  refresh();
+  setInterval(refresh, INTERVAL);
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TSUNAGI Vision — 強靭なネットワークのための独立インフラ</title>
+<meta name="description" content="TSUNAGI Vision：第一原理から構築した独立Cardanoインフラ。決定論的実行、オペレータ第一の設計、MUSUBI研究方針。">
+<style>
+:root {
+  --bg: #05080e;
+  --bg-surface: #0a0f1a;
+  --bg-card: rgba(12,18,30,0.65);
+  --border: rgba(80,120,180,0.10);
+  --border-hover: rgba(80,120,180,0.28);
+  --border-accent: rgba(80,140,220,0.35);
+  --text: #d0d6e2;
+  --text-m: #7a8598;
+  --text-d: #4c5668;
+  --accent: #3d6fa8;
+  --accent-l: #5a8ec8;
+  --white: #eceef3;
+  --mono: 'SF Mono','Cascadia Code','Fira Code','Consolas',monospace;
+  --sans: -apple-system,BlinkMacSystemFont,'Segoe UI','Inter','Hiragino Sans','Hiragino Kaku Gothic ProN','Noto Sans JP',Helvetica,Arial,sans-serif;
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* === Utility Bar === */
+.ub { position:fixed; top:0; left:0; right:0; z-index:100; height:48px; display:flex; align-items:center; justify-content:space-between; padding:0 28px; background:rgba(5,8,14,0.92); backdrop-filter:blur(14px); border-bottom:1px solid var(--border); }
+.ub-l { display:flex; align-items:center; gap:20px; }
+.ub-brand { font-size:0.82rem; font-weight:700; letter-spacing:0.14em; color:var(--white); text-decoration:none; }
+.ub-nav { display:flex; gap:6px; flex-wrap:wrap; }
+.ub-nav a { font-size:0.75rem; font-weight:500; letter-spacing:0.03em; color:var(--text-m); text-decoration:none; padding:5px 12px; border-radius:4px; border:1px solid transparent; transition:all 0.2s; }
+.ub-nav a:hover { color:var(--white); border-color:var(--border-accent); background:rgba(60,112,180,0.08); }
+.lang-switch { display:flex; align-items:center; gap:6px; margin-left:12px; font-size:0.75rem; white-space:nowrap; }
+.lang-switch a { text-decoration:none; color:var(--text-m); transition:color 0.2s ease; }
+.lang-switch a:hover { color:var(--text); }
+.lang-cur { color:var(--accent-l) !important; font-weight:600; }
+.lang-div { opacity:0.4; }
+
+/* === Page === */
+.pg { max-width:720px; margin:0 auto; padding:80px 28px 60px; }
+
+/* === Title Block === */
+.title-block { text-align:center; margin-bottom:48px; }
+.title-block h1 { font-size:2.2rem; font-weight:700; color:var(--white); letter-spacing:0.06em; margin-bottom:12px; }
+.title-block .subtitle { font-size:1.05rem; color:var(--text-m); font-weight:400; letter-spacing:0.02em; line-height:1.6; }
+.title-rule { width:60px; height:2px; background:linear-gradient(90deg, transparent, var(--accent), transparent); margin:28px auto 0; border:none; }
+
+/* === Content === */
+.content { max-width:720px; }
+.content h2 { font-size:1.3rem; font-weight:600; color:var(--white); margin:48px 0 16px; letter-spacing:0.02em; }
+.content h2 .section-num { font-family:var(--mono); font-size:0.75rem; color:var(--accent-l); margin-right:10px; letter-spacing:0.08em; }
+.content p { font-size:0.95rem; color:var(--text); line-height:1.85; margin-bottom:20px; }
+.content .jp { font-size:1.05em; color:var(--accent-l); }
+
+/* === MUSUBI Card === */
+.musubi-card { background:var(--bg-card); border:1px solid var(--border-accent); border-left:3px solid var(--accent); border-radius:8px; padding:32px 28px; margin:24px 0; }
+.musubi-card h2 { margin-top:0; }
+.musubi-card p:last-child { margin-bottom:0; }
+
+/* === Footer === */
+.ft { text-align:center; padding:40px 0 32px; border-top:1px solid var(--border); margin-top:48px; }
+.ft p { font-size:0.78rem; color:var(--text-d); text-align:center; letter-spacing:0.03em; }
+.ft .fm { font-size:0.88rem; color:var(--text-m); font-weight:600; margin-bottom:8px; }
+
+/* === Responsive === */
+@media (max-width:768px) {
+  .title-block h1 { font-size:1.7rem; }
+  .title-block .subtitle { font-size:0.95rem; }
+  .content h2 { font-size:1.15rem; margin:36px 0 14px; }
+  .content p { font-size:0.9rem; line-height:1.75; }
+  .pg { padding:68px 20px 48px; }
+  .ub { padding:0 16px; }
+  .musubi-card { padding:24px 20px; }
+}
+
+@media (max-width:480px) {
+  .title-block h1 { font-size:1.4rem; letter-spacing:0.04em; }
+  .title-block .subtitle { font-size:0.88rem; }
+  .content h2 { font-size:1.05rem; margin:28px 0 12px; }
+  .content p { font-size:0.88rem; line-height:1.7; margin-bottom:16px; }
+  .pg { padding:60px 16px 40px; }
+  .ub { padding:0 12px; height:44px; }
+  .ub-nav { gap:2px; }
+  .ub-nav a { padding:4px 8px; font-size:0.7rem; }
+  .musubi-card { padding:20px 16px; }
+}
+</style>
+</head>
+<body>
+
+<div class="ub">
+  <div class="ub-l"><a href="/" class="ub-brand">TSUNAGI</a></div>
+  <nav class="ub-nav">
+    <a href="/">Home</a>
+    <a href="/whitepaper/">Whitepaper</a>
+    <a href="/manifesto/">Manifesto</a>
+    <a href="/roadmap/">Roadmap</a>
+    <a href="/architecture/">Architecture</a>
+    <a href="/status/">Status</a>
+    <a href="/explorer/">Explorer</a>
+    <a href="/decode/">Decode</a>
+    <a href="/install/">Install</a>
+    <a href="/operator/">Operator</a>
+    <a href="/vision/">Vision</a>
+    <a href="/network/">Network</a>
+    <a href="/labs/">Labs</a>
+    <a href="/project/">Source</a>
+    <a href="/treasury/">Treasury</a>
+
+    <div class="lang-switch">
+      <a href="/" class="lang-cur">EN</a>
+      <span class="lang-div">|</span>
+      <a href="/jp/">日本語</a>
+    </div>
+  </nav>
+</div>
+
+<div class="pg">
+
+  <div class="title-block">
+    <h1>TSUNAGI Vision</h1>
+    <p class="subtitle">強靭なネットワークのための独立インフラ</p>
+    <hr class="title-rule">
+  </div>
+
+  <div class="content">
+
+    <h2><span class="section-num">&sect;1</span> TSUNAGIが存在する理由</h2>
+
+    <p>Cardanoの長期的な回復力は、実装の多様性に依存しています。単一のノード実装のみによって運営されるネットワークは、単一のコードベース、単一の前提、単一のエンジニアリングチームの優先順位にシステミックリスクを集中させます。TSUNAGIは、独立した実装を提供するために存在します &mdash; 第一原理から、異なるトレードオフで、異なる言語で、独立したエンジニアによって構築されたもの。</p>
+
+    <p>目標は既存のインフラを置き換えることではありません。別の視点、別のコードベース、別の検証済み動作をネットワークの基盤に加えることで、エコシステムを強化することです。</p>
+
+    <h2><span class="section-num">&sect;2</span> 独立した実装の重要性</h2>
+
+    <p>分散システムの歴史は、一貫した教訓を示しています：単一の実装に依存するネットワークは、障害時にのみ顕在化する脆弱性を持つということです。すべてのノードが同じコードを実行する場合、すべてのノードが同じ盲点を共有します。コンセンサスロジックのバグは、単に一つの参加者に影響するだけでなく &mdash; ネットワーク全体に同時に影響します。独立した実装は、異なるコードベースが同じ欠陥を共有する可能性が低いため、この種の障害に対する構造的防御を提供します。</p>
+
+    <p>Ethereumのマルチクライアントモデルの採用は、この原則を大規模に実証しています。実行層とコンセンサス層の複数の独立した実装 &mdash; Geth、Nethermind、Besu、Erigon、Lighthouse、Prysm、Tekuなど &mdash; を維持することで、Ethereumエコシステムは、モノカルチャーでは検出されなかったであろうプロトコルの曖昧性やコンセンサスのエッジケースを繰り返し発見してきました。クライアントがトランザクションの結果やブロックの有効性について異なる見解を示す場合、その不一致自体が価値を持ちます：仕様で明示されなかった前提を浮き彫りにするからです。</p>
+
+    <p>TSUNAGIは、この哲学をCardanoにもたらします。Zigで独立して構築され、既存のCardanoノード実装とのコード祖先を一切持たないTSUNAGIは、プロトコルの完全に独立した解釈を提供します。このプロジェクトは日本から開発されており、Cardanoのインフラ景観に地理的・文化的多様性を加えています。異なるエンジニアリングの伝統は、異なるアーキテクチャの直感、異なるテスト哲学、異なる障害モード認識を生み出します。この多様性は偶然ではなく &mdash; 独立した実装がネットワークに貢献する価値の一部です。</p>
+
+    <h2><span class="section-num">&sect;3</span> 決定論的インフラ</h2>
+
+    <p>決定論は、TSUNAGIアーキテクチャの基盤的制約です。同一の入力は、無条件で同一の出力を生成しなければなりません。隠された状態なし、実行パスを変更する暗黙の設定なし、システムレベルのエントロピーやタイミングへの依存なし。台帳パイプラインのすべての状態遷移は入力の純粋関数であり、すべての出力は同じ初期条件が与えられれば再現可能です。</p>
+
+    <p>この方針はすべてのアーキテクチャ上の決定に影響を与えます。台帳パイプラインは設計上モジュラーです &mdash; デルタ抽出、状態適用、アンドゥ管理、永続化はそれぞれ独立してテスト可能なサブシステムであり、明確に定義された入出力境界を持ちます。ブロックが処理されると、結果の台帳状態は前の状態とブロックの内容の決定論的関数となります。ロールバックが発生した場合、アンドゥパスはバイト単位で正確な以前の状態を生成します。近似も結果整合性もありません。システムは正しい結果を生成するか、明示的に失敗します。</p>
+
+    <p>決定論は単なる技術的特性ではなく、運用上の保証です。TSUNAGIを運用するオペレータは、ノードの動作を確信を持って推論できます。二つのノードが同じチェーンを処理すれば、同じ状態に到達します。状態が永続化され、後で復元された場合、再開された計算は中断されなかった実行と同一の結果を生成します。この予測可能性はデバッグ作業の一カテゴリ全体を排除し、非決定論的インフラには不可能な方法でシステムを監査可能にします。</p>
+
+    <h2><span class="section-num">&sect;4</span> オペレータ第一のシステム</h2>
+
+    <p>TSUNAGIは、自らのインフラを理解したいオペレータのために設計されています &mdash; 単に運用するだけでなく、内部状態を把握し、動作を診断し、出力を信頼できるように。このプロジェクトは、通常時はブラックボックスとして機能し、障害時に不透明になるという一般的なインフラのパターンを拒否します。TSUNAGIのすべてのサブシステムは、自らを説明するよう構築されています。</p>
+
+    <p>この原則は、いくつかのメカニズムを通じて具体的に現れています。KAGAMIスナップショットは、ノードの内部状態 &mdash; 台帳位置、同期進捗、サブシステムの健全性、リソース使用率 &mdash; のポイントインタイム表現を、構造化された機械可読形式で提供します。構造化ジャーナルは、現在の状態に至った一連のイベントを再構築するのに十分な詳細で、ノードの運用履歴を記録します。カバレッジ追跡は、どのプロトコルパスが実行されたかを測定し、テスト済みのものと未検証のものについて確信を与えます。</p>
+
+    <p>この哲学はエラー処理と障害モードにも及びます。TSUNAGIが異常に遭遇した場合、黙ってリトライしたり、一般的なログメッセージの背後にエラーを飲み込んだりしません。何が試みられていたか、どの前提条件が満たされていたか、何が具体的に問題だったかの文脈とともに障害を報告します。オペレータは、ノードが何をしているか、なぜそうしているかを推測する必要があるべきではありません。自らの動作を説明できないインフラは信頼できないインフラであり、TSUNAGIは可観測性を後から追加する機能としてではなく、コアなアーキテクチャ要件として扱います。</p>
+
+    <div class="musubi-card">
+
+      <h2><span class="section-num">&sect;5</span> MUSUBI &mdash; 接続型インフラ</h2>
+
+      <p>MUSUBI <span class="jp">（結び）</span>は、結合、接続、そして接続を通じた創発を意味します。日本の伝統において、結びは物事を関係に導く生成的な力を表します &mdash; 単なるリンクではなく、接続の行為を通じて新しいものを生み出すこと。</p>
+
+      <p>TSUNAGIの長期的ビジョンにおいて、MUSUBIはシステム、チェーン、実行環境間の接続型インフラの可能性を表しています。これは製品発表でもプロトコル仕様でもありません。研究方針です。</p>
+
+      <p>ブロックチェーンエコシステムは、相互運用性に向かって収束しています。境界を越えて状態を検証できない孤立したチェーンは、ユーザーとアプリケーションが実行環境間の流動的な移動を要求するにつれ、摩擦が増大します。状態遷移を独立して検証できる決定論的インフラ &mdash; リモートの証明を信頼するのではなく、計算を再現することで &mdash; は、信頼ドメイン間の不可欠な接続組織となる可能性があります。あるチェーンからの証明を受け取り、独立して維持された状態と照合し、決定論的な出力を生成する能力は、TSUNAGIのアーキテクチャが支援するよう設計された操作そのものです。</p>
+
+      <p>TSUNAGIの基本的な決定 &mdash; 決定論的実行、モジュラー状態管理、独立して検証可能な台帳遷移、構造化された状態表現 &mdash; は、接続型インフラの偶然の前提条件ではありません。境界を越えた検証に参加する前に、あらゆるシステムが備えなければならない特性です。MUSUBIはこの研究方針を誠実に名付けています：それが何になるかを過度に約束することなく、軌道を認識しています。信頼できる接続型インフラを構築する仕事は、信頼できるインフラを構築することから始まり、それがTSUNAGIの現在の取り組みの焦点です。</p>
+
+    </div>
+
+    <h2><span class="section-num">&sect;6</span> 持続可能な開発</h2>
+
+    <p>TSUNAGIは、持続的な個人の取り組みを通じて構築されています。開発に資金を提供する制度的助成金なし、ロードマップを形成するベンチャーキャピタルなし、エンジニアリングの判断を上回るタイムラインを持つ外部ステークホルダーなし。この独立性は意図的です。プロジェクトの技術的決定が、資金サイクルや投資家の期待ではなく、正確性と長期的価値によって導かれることを保証します。</p>
+
+    <p>持続可能な開発とは、品質を維持し燃え尽きを防ぐペースで構築することを意味します。インフラソフトウェアは暗黙の約束を伴います：保守されること、動作が一貫していること、オペレータが何年にもわたる運用を通じて依存できること。その約束を信頼性をもって行うには、開発アプローチ自体が持続可能でなければなりません。TSUNAGIは、速度よりも正確性を、急速な機能蓄積よりも徹底的なテストを、アナウンスよりも動作するソフトウェアを優先します。出荷されるすべてのコンポーネントは、実装すると主張する動作に対して検証されています。</p>
+
+    <p>プロジェクトの<a href="/jp/treasury/" style="color:var(--accent-l); text-decoration:none; border-bottom:1px solid var(--border-accent); transition:border-color 0.2s;">トレジャリー</a>は透明で公開文書化されています。独立したインフラ開発の財政的現実は、企業構造の背後に隠されたものではなく、プロジェクトの物語の一部です。この透明性は二つの目的を果たします：プロジェクトが誠実に運営されていることを示すこと、そして持続的な独立開発が実際に何を必要とするかの明確な像を提供することです。</p>
+
+    <p>TSUNAGIは、投機的な製品提案として構築されているのではありません。ライブネットワークに対して検証された決定論的実行、観察されたニーズから構築されたオペレータツール、資金要件ではなくエンジニアリングの判断によって導かれたアーキテクチャ上の決定に基づく、実際の実装作業に根ざした独立インフラの取り組みです。独立したエンジニアリングが何を生み出せるかを実証することで、Cardanoインフラの可能性を広げることを目指しています。</p>
+
+    <h2><span class="section-num">&sect;7</span> 今後の展望</h2>
+
+    <p>TSUNAGIは初期段階のインフラです。Cardanoネットワークには、プライマリノードソフトウェアを補完する成熟した独立した実装がまだありません。そしてそれを構築することは複数年にわたる事業です。作業は進行中です &mdash; 各エポックが新しいプロトコル動作の検証、新しいエッジケースの処理、新しいサブシステムの構築をもたらします。実装の正確性への近道はなく、このプロジェクトはそうでないふりをしません。</p>
+
+    <p>ビジョンは長期的です。強靭なネットワークは単一の開発サイクルでは構築されません。持続的な取り組み、独立した検証、そしてソフトウェアが時間をかけて確実に、主張通りの動作を行うことから生まれる信頼の緩やかな蓄積によって構築されます。TSUNAGIは、検証済みの動作を一つずつ積み重ねて、その回復力に貢献します。Let It Run. Let It Resolve.</p>
+
+  </div>
+
+  <div class="ft">
+    <p class="fm">Let It Run. Let It Resolve.</p>
+    <p>tsunagi.tech &middot; 独立Cardanoインフラ研究</p>
+  </div>
+
+</div>
+
+</body>
+</html>

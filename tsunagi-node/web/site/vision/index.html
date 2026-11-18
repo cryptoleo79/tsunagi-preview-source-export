@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TSUNAGI Vision — Independent Infrastructure for a Resilient Network</title>
+<meta name="description" content="TSUNAGI Vision: Independent Cardano infrastructure built from first principles. Deterministic execution, operator-first design, and the MUSUBI research direction.">
+<style>
+:root {
+  --bg: #05080e;
+  --bg-surface: #0a0f1a;
+  --bg-card: rgba(12,18,30,0.65);
+  --border: rgba(80,120,180,0.10);
+  --border-hover: rgba(80,120,180,0.28);
+  --border-accent: rgba(80,140,220,0.35);
+  --text: #d0d6e2;
+  --text-m: #7a8598;
+  --text-d: #4c5668;
+  --accent: #3d6fa8;
+  --accent-l: #5a8ec8;
+  --white: #eceef3;
+  --mono: 'SF Mono','Cascadia Code','Fira Code','Consolas',monospace;
+  --sans: -apple-system,BlinkMacSystemFont,'Segoe UI','Inter',Helvetica,Arial,sans-serif;
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* === Utility Bar Nav === */
+.ub { position:fixed; top:0; left:0; right:0; z-index:100; height:48px; display:flex; align-items:center; justify-content:space-between; padding:0 28px; background:rgba(5,8,14,0.92); backdrop-filter:blur(14px); border-bottom:1px solid var(--border); }
+.ub-l { display:flex; align-items:center; gap:20px; }
+.ub-brand { font-size:0.82rem; font-weight:700; letter-spacing:0.14em; color:var(--white); text-decoration:none; }
+.ub-nav { display:flex; gap:6px; flex-wrap:wrap; }
+.ub-nav a { font-size:0.75rem; font-weight:500; letter-spacing:0.03em; color:var(--text-m); text-decoration:none; padding:5px 12px; border-radius:4px; border:1px solid transparent; transition:all 0.2s; }
+.ub-nav a:hover { color:var(--white); border-color:var(--border-accent); background:rgba(60,112,180,0.08); }
+.lang-switch { display:flex; align-items:center; gap:6px; margin-left:12px; font-size:0.75rem; white-space:nowrap; }
+.lang-switch a { text-decoration:none; color:var(--text-m); transition:color 0.2s ease; }
+.lang-switch a:hover { color:var(--text); }
+.lang-cur { color:var(--accent-l) !important; font-weight:600; }
+.lang-div { opacity:0.4; }
+
+/* === Page Container === */
+.pg { max-width:720px; margin:0 auto; padding:80px 28px 60px; }
+
+/* === Title Block === */
+.title-block { text-align:center; margin-bottom:48px; }
+.title-block h1 { font-size:2.2rem; font-weight:700; color:var(--white); letter-spacing:0.06em; margin-bottom:12px; }
+.title-block .subtitle { font-size:1.05rem; color:var(--text-m); font-weight:400; letter-spacing:0.02em; line-height:1.6; }
+.title-rule { width:60px; height:2px; background:linear-gradient(90deg, transparent, var(--accent), transparent); margin:28px auto 0; border:none; }
+
+/* === Content Typography === */
+.content { max-width:720px; }
+.content h2 { font-size:1.3rem; font-weight:600; color:var(--white); margin:48px 0 16px; letter-spacing:0.02em; }
+.content h2 .section-num { font-family:var(--mono); font-size:0.75rem; color:var(--accent-l); margin-right:10px; letter-spacing:0.08em; }
+.content p { font-size:0.95rem; color:var(--text); line-height:1.85; margin-bottom:20px; }
+.content .jp { font-size:1.05em; color:var(--accent-l); }
+
+/* === MUSUBI Card === */
+.musubi-card { background:var(--bg-card); border:1px solid var(--border-accent); border-left:3px solid var(--accent); border-radius:8px; padding:32px 28px; margin:24px 0; }
+.musubi-card h2 { margin-top:0; }
+.musubi-card p:last-child { margin-bottom:0; }
+
+/* === Footer === */
+.ft { text-align:center; padding:40px 0 32px; border-top:1px solid var(--border); margin-top:48px; }
+.ft p { font-size:0.78rem; color:var(--text-d); text-align:center; letter-spacing:0.03em; }
+.ft .fm { font-size:0.88rem; color:var(--text-m); font-weight:600; margin-bottom:8px; }
+
+/* === Responsive === */
+@media (max-width:768px) {
+  .title-block h1 { font-size:1.7rem; }
+  .title-block .subtitle { font-size:0.95rem; }
+  .content h2 { font-size:1.15rem; margin:36px 0 14px; }
+  .content p { font-size:0.9rem; line-height:1.75; }
+  .pg { padding:68px 20px 48px; }
+  .ub { padding:0 16px; }
+  .musubi-card { padding:24px 20px; }
+}
+
+@media (max-width:480px) {
+  .title-block h1 { font-size:1.4rem; letter-spacing:0.04em; }
+  .title-block .subtitle { font-size:0.88rem; }
+  .content h2 { font-size:1.05rem; margin:28px 0 12px; }
+  .content p { font-size:0.88rem; line-height:1.7; margin-bottom:16px; }
+  .pg { padding:60px 16px 40px; }
+  .ub { padding:0 12px; height:44px; }
+  .ub-nav { gap:2px; }
+  .ub-nav a { padding:4px 8px; font-size:0.7rem; }
+  .musubi-card { padding:20px 16px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Utility Bar (shared) -->
+<div id="nav-container"></div>
+<script src="/assets/nav.js"></script>
+
+<div class="pg">
+
+  <div class="title-block">
+    <h1>TSUNAGI Vision</h1>
+    <p class="subtitle">Independent infrastructure for a resilient network</p>
+    <hr class="title-rule">
+  </div>
+
+  <div class="content">
+
+    <h2><span class="section-num">&sect;1</span> Why TSUNAGI Exists</h2>
+
+    <p>Cardano's long-term resilience depends on implementation diversity. A network served by a single node implementation concentrates systemic risk in a single codebase, a single set of assumptions, and a single engineering team's priorities. TSUNAGI exists to contribute an independent implementation &mdash; built from first principles, with different tradeoffs, in a different language, by an independent engineer.</p>
+
+    <p>The goal is not to replace existing infrastructure. It is to strengthen the ecosystem by adding another perspective, another codebase, and another set of verified behaviors to the network's foundation.</p>
+
+    <div class="musubi-card">
+
+      <h2>Musubi &mdash; <span class="jp">結び</span></h2>
+
+      <p>Musubi <span class="jp">(結び)</span> is a concept from Shinto philosophy referring to the force that connects elements together and allows new structures to emerge.</p>
+
+      <p>The name TSUNAGI <span class="jp">(繋ぎ)</span> reflects this idea directly: connection as a generative force.</p>
+
+      <p>In the context of distributed infrastructure, Musubi represents the principle that systems gain resilience and meaning through their connections &mdash; between nodes, operators, and communities.</p>
+
+      <p>TSUNAGI is designed around this philosophy: a node architecture built not only to participate in a network, but to strengthen the connective fabric of the ecosystem.</p>
+
+    </div>
+
+    <h2><span class="section-num">&sect;2</span> Independent Implementations Matter</h2>
+
+    <p>The history of distributed systems offers a consistent lesson: networks that depend on a single implementation are fragile in ways that only become visible during failure. When every node runs the same code, every node shares the same blind spots. A bug in consensus logic does not merely affect one participant &mdash; it affects the entire network simultaneously. Independent implementations provide a structural defense against this class of failure, because different codebases are unlikely to share the same defects.</p>
+
+    <p>Ethereum's adoption of a multi-client model demonstrates this principle at scale. By maintaining multiple independent implementations of the execution and consensus layers &mdash; Geth, Nethermind, Besu, Erigon, Lighthouse, Prysm, Teku, and others &mdash; the Ethereum ecosystem has repeatedly caught protocol ambiguities and consensus edge cases that would have gone undetected in a monoculture. When clients disagree on the outcome of a transaction or the validity of a block, the disagreement itself is valuable: it surfaces assumptions that were never made explicit in the specification. This process has strengthened Ethereum's protocol design in ways that no amount of testing on a single codebase could achieve.</p>
+
+    <p>TSUNAGI brings this philosophy to Cardano. Built independently in Zig, with no shared code ancestry with existing Cardano node implementations, TSUNAGI provides an entirely separate interpretation of the protocol. The project is developed from Japan, adding geographic and cultural diversity to Cardano's infrastructure landscape. Different engineering traditions produce different architectural instincts, different testing philosophies, and different failure mode awareness. This diversity is not incidental &mdash; it is part of the value that an independent implementation contributes to the network.</p>
+
+    <h2><span class="section-num">&sect;3</span> Deterministic Infrastructure</h2>
+
+    <p>Determinism is the foundational constraint of TSUNAGI's architecture. Identical inputs must produce identical outputs, unconditionally. There is no hidden state, no ambient configuration that alters execution paths, no reliance on system-level entropy or timing. Every state transition in the ledger pipeline is a pure function of its inputs, and every output is reproducible given the same starting conditions.</p>
+
+    <p>This commitment shapes every architectural decision. The ledger pipeline is modular by design &mdash; delta extraction, state application, undo management, and persistence are independently testable subsystems, each with clearly defined input and output boundaries. When a block is processed, the resulting ledger state is a deterministic function of the previous state and the block's contents. When a rollback occurs, the undo path produces the exact prior state, byte for byte. There is no approximation and no eventual consistency. The system either produces the correct result or it fails explicitly.</p>
+
+    <p>Determinism is not merely a technical property; it is an operational guarantee. Operators who run TSUNAGI can reason about their node's behavior with confidence. If two nodes process the same chain, they will arrive at the same state. If a state is persisted and later restored, the resumed computation will produce identical results to an uninterrupted run. This predictability eliminates an entire category of debugging effort and makes the system auditable in a way that non-deterministic infrastructure cannot be.</p>
+
+    <h2><span class="section-num">&sect;4</span> Operator-First Systems</h2>
+
+    <p>TSUNAGI is designed for operators who want to understand their infrastructure &mdash; not merely run it, but comprehend its internal state, diagnose its behavior, and trust its outputs. The project rejects the common pattern of infrastructure that works as a black box during normal operation and becomes opaque during failure. Every subsystem in TSUNAGI is built to explain itself.</p>
+
+    <p>This principle manifests concretely through several mechanisms. KAGAMI snapshots provide point-in-time representations of the node's internal state &mdash; ledger position, sync progress, subsystem health, and resource utilization &mdash; in structured, machine-readable formats. Structured journals record the node's operational history with enough detail to reconstruct the sequence of events that led to any current state. Coverage tracking measures which protocol paths have been exercised, giving operators and developers confidence about what has been tested and what remains unverified.</p>
+
+    <p>The philosophy extends to error handling and failure modes. When TSUNAGI encounters an anomaly, it does not silently retry or swallow the error behind a generic log message. It reports the failure with context: what was being attempted, what preconditions were met, and what specifically went wrong. Operators should never need to guess what the node is doing or why. Infrastructure that cannot explain its own behavior is infrastructure that cannot be trusted, and TSUNAGI treats observability not as a feature to be added later but as a core architectural requirement.</p>
+
+    <div class="musubi-card">
+
+      <h2><span class="section-num">&sect;5</span> MUSUBI &mdash; Connective Infrastructure</h2>
+
+      <p>MUSUBI <span class="jp">(&#32080;&#12403;)</span> means binding, connection, and emergence through connection. In Japanese tradition, musubi represents the generative force that brings things into relation &mdash; not merely linking, but creating something new through the act of connection.</p>
+
+      <p>Within the long-term vision of TSUNAGI, MUSUBI represents the possibility of connective infrastructure between systems, chains, and execution environments. This is not a product announcement or a protocol specification. It is a research direction.</p>
+
+      <p>The blockchain ecosystem is converging toward interoperability. Isolated chains that cannot verify state across their boundaries face increasing friction as users and applications demand fluid movement between execution environments. Deterministic infrastructure that can independently verify state transitions &mdash; not by trusting a remote attestation, but by replaying the computation &mdash; may become essential connective tissue between trust domains. The ability to take a proof from one chain, verify it against independently maintained state, and produce a deterministic output is precisely the kind of operation that TSUNAGI's architecture is designed to support.</p>
+
+      <p>TSUNAGI's foundational decisions &mdash; deterministic execution, modular state management, independently verifiable ledger transitions, and structured state representation &mdash; are not accidental preconditions for connective infrastructure. They are the properties that any system must possess before it can participate in cross-boundary verification. MUSUBI names this research direction honestly: it acknowledges the trajectory without overpromising what it will become. The work of building trustworthy connective infrastructure begins with building trustworthy infrastructure, and that is where TSUNAGI's current effort is focused.</p>
+
+    </div>
+
+    <h2><span class="section-num">&sect;6</span> Sustainable Development</h2>
+
+    <p>TSUNAGI is built through sustained individual commitment. There are no institutional grants funding the development, no venture capital shaping the roadmap, and no external stakeholders whose timelines override engineering judgment. This independence is deliberate. It ensures that the project's technical decisions are driven by correctness and long-term value rather than by funding cycles or investor expectations.</p>
+
+    <p>Sustainable development means building at a pace that maintains quality and prevents burnout. Infrastructure software carries an implicit promise: that it will be maintained, that its behavior will remain consistent, and that its operators can depend on it across years of operation. Making that promise credibly requires a development approach that is itself sustainable. TSUNAGI prioritizes correctness over speed, thorough testing over rapid feature accumulation, and working software over announcements. Every component that ships has been verified against the behaviors it claims to implement.</p>
+
+    <p>The project's <a href="/treasury" style="color:var(--accent-l); text-decoration:none; border-bottom:1px solid var(--border-accent); transition:border-color 0.2s;">treasury</a> is transparent and publicly documented. The financial reality of independent infrastructure development is part of the project's story, not something hidden behind a corporate structure. This transparency serves two purposes: it demonstrates that the project operates with integrity, and it provides a clear picture of what sustained independent development actually requires. Contributors and supporters can see exactly how resources are allocated and make informed decisions about their involvement.</p>
+
+    <p>TSUNAGI is not being built as a speculative product pitch. It is an independent infrastructure effort grounded in real implementation work &mdash; deterministic execution verified against a live network, operator tooling built from observed need, and architectural decisions driven by engineering judgment rather than funding requirements. The aim is to expand what Cardano infrastructure can become by demonstrating what independent engineering can produce.</p>
+
+    <h2><span class="section-num">&sect;7</span> Looking Forward</h2>
+
+    <p>TSUNAGI is early infrastructure. The Cardano network does not yet have a mature independent implementation to complement its primary node software, and building one is a multi-year undertaking. The work is ongoing &mdash; each epoch brings new protocol behaviors to verify, new edge cases to handle, and new subsystems to build. There are no shortcuts to implementation correctness, and the project does not pretend otherwise.</p>
+
+    <p>The vision is long-term. A resilient network is not built in a single development cycle. It is built through sustained effort, independent verification, and the slow accumulation of trust that comes from software that does exactly what it claims to do, reliably, over time. TSUNAGI contributes to that resilience one verified behavior at a time. Let It Run. Let It Resolve.</p>
+
+  </div>
+
+  <div class="ft">
+    <p class="fm">Let It Run. Let It Resolve.</p>
+    <p>tsunagi.tech &middot; Independent Cardano infrastructure research</p>
+  </div>
+
+</div>
+
+</body>
+</html>

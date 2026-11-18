@@ -1,0 +1,32 @@
+# Tsunagi BAEY Guardian policy tick (oneshot, triggered by timer)
+#
+# Fetches metrics from the running node, computes a suspicion score,
+# and logs a policy_tick event to TSUNAGI_HOME/baey/events.log.
+#
+# Default: dry-run (observation only, no actions).
+# To enable apply mode, change ExecStart to use --apply and set
+# TSUNAGI_BAEY_APPLY=1.  Both are required for actions to execute.
+#
+#   cp ops/systemd/baey-loop.service.example ~/.config/systemd/user/baey-loop.service
+#   cp ops/systemd/baey-loop.timer.example   ~/.config/systemd/user/baey-loop.timer
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now baey-loop.timer
+
+[Unit]
+Description=Tsunagi BAEY Guardian policy tick (dry-run)
+After=network.target
+
+[Service]
+Type=oneshot
+Environment=TSUNAGI_HOME=%h/tsunagi-home-mainnet
+# Dry-run (default): observation only
+ExecStart=%h/src/tsunagi-follower/tsunagi-node/zig-out/bin/tsunagi-node baey-loop --dry-run
+# Apply mode (uncomment both lines below, comment out the dry-run ExecStart above):
+# Environment=TSUNAGI_BAEY_APPLY=1
+# ExecStart=%h/src/tsunagi-follower/tsunagi-node/zig-out/bin/tsunagi-node baey-loop --apply
+TimeoutStartSec=30
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=%h/tsunagi-home-mainnet

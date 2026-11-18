@@ -1,0 +1,15 @@
+# Periodic trigger for LMDB incremental backfill
+#
+# Runs every 5 minutes; the service is oneshot so runs serialize automatically.
+# Adjust OnUnitActiveSec to taste (lower = faster convergence, more I/O).
+
+[Unit]
+Description=Periodic Tsunagi LMDB backfill
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TSUNAGI Roadmap — Development Phases</title>
+<meta name="description" content="TSUNAGI development roadmap: deterministic infrastructure development phases from foundation through ecosystem contribution.">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #05080e;
+  --bg-surface: #0a0f1a;
+  --bg-card: rgba(12,18,30,0.65);
+  --border: rgba(80,120,180,0.12);
+  --border-accent: rgba(80,140,220,0.35);
+  --text: #c8ced8;
+  --text-h: #e8ecf2;
+  --text-m: #7a8598;
+  --text-d: #4c5668;
+  --accent: #3d6fa8;
+  --accent-l: #5a8ec8;
+  --white: #eceef3;
+  --green: #3da86f;
+  --green-bg: rgba(61,168,111,0.08);
+  --green-border: rgba(61,168,111,0.25);
+  --yellow: #a89b3d;
+  --yellow-bg: rgba(168,155,61,0.08);
+  --yellow-border: rgba(168,155,61,0.25);
+  --dim-bg: rgba(80,120,180,0.05);
+  --dim-border: rgba(80,120,180,0.10);
+  --mono: 'SF Mono','Cascadia Code','Fira Code','Consolas',monospace;
+  --sans: -apple-system,BlinkMacSystemFont,'Segoe UI','Inter',Helvetica,Arial,sans-serif;
+  --serif: 'Charter','Georgia','Cambria','Times New Roman',serif;
+}
+html { scroll-behavior: smooth; }
+body { font-family: var(--sans); background: var(--bg); color: var(--text); line-height: 1.7; font-size: 16px; overflow-x: hidden; }
+
+.ub { position:fixed; top:0; left:0; right:0; z-index:100; height:48px; display:flex; align-items:center; justify-content:space-between; padding:0 28px; background:rgba(5,8,14,0.92); backdrop-filter:blur(14px); border-bottom:1px solid var(--border); }
+.ub-l { display:flex; align-items:center; gap:20px; }
+.ub-brand { font-size:0.82rem; font-weight:700; letter-spacing:0.14em; color:var(--white); text-decoration:none; }
+.ub-nav { display:flex; gap:6px; flex-wrap:wrap; }
+.ub-nav a { font-size:0.75rem; font-weight:500; letter-spacing:0.03em; color:var(--text-m); text-decoration:none; padding:5px 12px; border-radius:4px; border:1px solid transparent; transition:all 0.2s; }
+.ub-nav a:hover { color:var(--white); border-color:var(--border-accent); background:rgba(60,112,180,0.08); }
+.lang-switch { display:flex; align-items:center; gap:6px; margin-left:12px; font-size:0.75rem; white-space:nowrap; }
+.lang-switch a { text-decoration:none; color:var(--text-m); transition:color 0.2s ease; }
+.lang-switch a:hover { color:var(--text); }
+.lang-cur { color:var(--accent-l) !important; font-weight:600; }
+.lang-div { opacity:0.4; }
+
+.pg { max-width:800px; margin:0 auto; padding:80px 28px 60px; }
+
+.tb { text-align:center; padding:60px 0 48px; border-bottom:1px solid var(--border); margin-bottom:48px; }
+.tb h1 { font-size:2.2rem; font-weight:700; color:var(--white); letter-spacing:0.06em; margin-bottom:8px; }
+.tb .st { font-size:1rem; color:var(--text-m); margin-bottom:24px; }
+.tb .mt { font-size:0.82rem; color:var(--text-d); letter-spacing:0.03em; }
+
+.intro { font-family:var(--serif); font-size:0.95rem; color:var(--text-m); text-align:center; max-width:620px; margin:0 auto 48px; line-height:1.75; }
+
+/* Phase cards */
+.phase { background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:32px 28px; margin-bottom:24px; position:relative; overflow:hidden; transition:border-color 0.3s; }
+.phase:hover { border-color:var(--border-accent); }
+.phase::before { content:''; position:absolute; top:0; left:0; bottom:0; width:3px; }
+.phase.complete::before { background:var(--green); }
+.phase.progress::before { background:var(--yellow); }
+.phase.planned::before { background:var(--accent); }
+
+.phase-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:8px; }
+.phase-title { font-size:1.15rem; font-weight:700; color:var(--white); letter-spacing:0.01em; }
+
+.badge { font-family:var(--mono); font-size:0.68rem; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; padding:4px 12px; border-radius:3px; }
+.badge-complete { color:var(--green); background:var(--green-bg); border:1px solid var(--green-border); }
+.badge-progress { color:var(--yellow); background:var(--yellow-bg); border:1px solid var(--yellow-border); }
+.badge-planned { color:var(--accent-l); background:var(--dim-bg); border:1px solid var(--dim-border); }
+
+.phase-desc { font-size:0.9rem; color:var(--text-m); margin-bottom:16px; line-height:1.7; }
+
+.phase ul { margin:0 0 16px 20px; }
+.phase li { font-size:0.88rem; color:var(--text); margin-bottom:8px; line-height:1.65; }
+.phase li strong { color:var(--text-h); }
+
+.phase-verify { background:var(--bg-surface); border:1px solid var(--border); border-radius:6px; padding:16px 20px; margin-top:16px; }
+.phase-verify h4 { font-size:0.78rem; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-d); margin-bottom:10px; }
+.phase-verify ul { margin:0 0 0 16px; }
+.phase-verify li { font-size:0.82rem; color:var(--text-m); margin-bottom:4px; }
+
+hr { border:none; border-top:1px solid var(--border); margin:48px 0; }
+
+/* Guiding principles */
+.principles { background:var(--bg-surface); border-left:3px solid var(--accent); padding:24px 28px; border-radius:0 6px 6px 0; margin:48px 0; }
+.principles h2 { font-size:1.1rem; font-weight:700; color:var(--text-h); margin:0 0 16px; border:none; padding:0; }
+.principles ul { margin:0 0 0 20px; }
+.principles li { font-size:0.9rem; margin-bottom:8px; line-height:1.65; }
+
+.motto { text-align:center; font-size:1.1rem; font-weight:600; color:var(--white); font-style:italic; padding:24px 0; }
+
+.ft { text-align:center; padding:40px 0 32px; border-top:1px solid var(--border); margin-top:60px; }
+.ft p { font-size:0.78rem; color:var(--text-d); text-align:center; letter-spacing:0.03em; }
+.ft .fm { font-size:0.88rem; color:var(--text-m); font-weight:600; margin-bottom:8px; }
+
+@media(max-width:768px){ .pg{padding:70px 18px 40px;} .tb h1{font-size:1.7rem;} .phase{padding:24px 20px;} .ub{padding:0 16px;} .ub-nav a{padding:5px 8px;font-size:0.7rem;} }
+@media(max-width:480px){ .tb h1{font-size:1.4rem;} .pg{padding:64px 14px 32px;} .phase-header{flex-direction:column;align-items:flex-start;} }
+</style>
+</head>
+<body>
+
+<!-- Utility Bar (shared) -->
+<div id="nav-container"></div>
+<script src="/assets/nav.js"></script>
+
+<div class="pg">
+
+<div class="tb">
+  <h1>TSUNAGI Roadmap</h1>
+  <div class="st">Deterministic Infrastructure Development Phases</div>
+  <div class="mt">ASY</div>
+</div>
+
+<p class="intro">Each phase builds on the foundations established by its predecessors. A phase is complete when its verification criteria are satisfied, not when a deadline arrives. Phases are ordered by dependency, not by calendar.</p>
+
+<!-- Phase 1 -->
+<div class="phase complete">
+  <div class="phase-header">
+    <span class="phase-title">Phase 1 &mdash; Deterministic Node Foundation</span>
+    <span class="badge badge-complete">Complete</span>
+  </div>
+  <p class="phase-desc">The foundational phase established the core architecture: a deterministic Cardano node written entirely in Zig, capable of following the chain, maintaining a live UTxO set, and verifying its own ledger transitions at runtime.</p>
+  <ul>
+    <li><strong>Zig-only architecture</strong> &mdash; Single static binary with two external library dependencies (LMDB, libsodium). No runtime interpreter, garbage collector, or dynamic framework.</li>
+    <li><strong>Deterministic ledger pipeline</strong> &mdash; Modular state machine separating delta extraction, state application, undo management, and pipeline orchestration into independently testable components.</li>
+    <li><strong>Shadow ledger verification</strong> &mdash; Independent memory-only pipeline instance processing identical deltas on every block, with per-block undo-depth parity checking.</li>
+    <li><strong>Replay harness</strong> &mdash; Offline execution driver for recorded block sequences, enabling deterministic regression testing and cross-build verification.</li>
+    <li><strong>Preview network validation</strong> &mdash; Zero shadow mismatches, zero apply errors, and zero rollback errors across all sessions.</li>
+  </ul>
+  <div class="phase-verify">
+    <h4>Verification Criteria</h4>
+    <ul>
+      <li>Shadow parity maintained across all observed blocks</li>
+      <li>Replay harness produces bitwise reproducible results across executions</li>
+      <li>All inline tests pass under the leak-detecting allocator</li>
+      <li>Release build compiles without warnings</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Phase 2 -->
+<div class="phase complete">
+  <div class="phase-header">
+    <span class="phase-title">Phase 2 &mdash; Persistent Ledger Engine</span>
+    <span class="badge badge-complete">Complete</span>
+  </div>
+  <p class="phase-desc">The persistence phase connected the deterministic pipeline to durable storage, enabling the node to retain UTxO state across restarts and bootstrap from pre-computed snapshots.</p>
+  <ul>
+    <li><strong>LMDB truth mode</strong> &mdash; Three-stage persistence: preflight scan, atomic LMDB write, automatic memory fallback with shadow-write convergence. Three operational modes (memory_only, lmdb_truth, lmdb_native).</li>
+    <li><strong>Snapshot bootstrap system</strong> &mdash; TSF2 format with Blake2b-256 integrity digest and Ed25519 signature attestation.</li>
+    <li><strong>State digest verification</strong> &mdash; CLI command for Blake2b-256 digest over the complete LMDB UTxO set.</li>
+    <li><strong>Preflight coverage diagnostics</strong> &mdash; Read-only LMDB scan counting consumed inputs present before write transactions are opened.</li>
+    <li><strong>Storage reliability</strong> &mdash; Transaction abort on write failure, shadow-write convergence, bounded undo stack with correct memory reclamation.</li>
+  </ul>
+  <div class="phase-verify">
+    <h4>Verification Criteria</h4>
+    <ul>
+      <li>LMDB truth mode operates with zero data loss across process restarts</li>
+      <li>Snapshot export-import round-trip preserves state digest</li>
+      <li>Preflight diagnostics accurately report coverage ratios</li>
+      <li>Shadow-write mechanism demonstrates measurable convergence</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Phase 3 -->
+<div class="phase complete">
+  <div class="phase-header">
+    <span class="phase-title">Phase 3 &mdash; Self-Healing Infrastructure</span>
+    <span class="badge badge-complete">Complete</span>
+  </div>
+  <p class="phase-desc">The observability phase embedded structured health evaluation, integrity verification, and automated stabilization directly into the node binary.</p>
+  <ul>
+    <li><strong>KAGAMI diagnostics</strong> &mdash; JSON health snapshots, human-readable reports, and continuous telemetry streams.</li>
+    <li><strong>YAMORI guardian monitor</strong> &mdash; Seven structured checks with event memory and safe-mode engagement.</li>
+    <li><strong>TATE fragment defense</strong> &mdash; Fragment ancestry verification, coverage evaluation, and operator recommendations.</li>
+    <li><strong>KURA stabilization layer</strong> &mdash; Automated artifact maintenance with retention policy enforcement.</li>
+    <li><strong>BAEY self-healing loop</strong> &mdash; Build-Analyze-Evolve-Yield operational cycle.</li>
+  </ul>
+  <div class="phase-verify">
+    <h4>Verification Criteria</h4>
+    <ul>
+      <li>KAGAMI snapshots accurately reflect node state at capture time</li>
+      <li>YAMORI threshold crossings trigger appropriate event records</li>
+      <li>TATE detects fragment ancestry breaks within one evaluation cycle</li>
+      <li>KURA stabilization runs complete without operator intervention</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Phase 4 -->
+<div class="phase progress">
+  <div class="phase-header">
+    <span class="phase-title">Phase 4 &mdash; Operator Infrastructure</span>
+    <span class="badge badge-progress">In Progress</span>
+  </div>
+  <p class="phase-desc">The operator phase focuses on reducing the operational burden for stake pool operators and relay infrastructure administrators deploying TSUNAGI nodes.</p>
+  <ul>
+    <li><strong>SPO-friendly relay deployment</strong> &mdash; Streamlined deployment workflow for operators running TSUNAGI as relay infrastructure. Reduced configuration surface with sensible defaults for common deployment scenarios.</li>
+    <li><strong>Lightweight node runtime</strong> &mdash; Optimization of memory footprint and startup time for resource-constrained environments. Efficient use of LMDB memory mapping for large UTxO sets without proportional heap allocation.</li>
+    <li><strong>Deterministic observability tools</strong> &mdash; Operator-facing CLI commands that produce structured, actionable output. Health evaluation, coverage assessment, and artifact status available as single-command queries.</li>
+    <li><strong>Automated artifact stabilization</strong> &mdash; End-to-end automation of fragment sealing, snapshot refresh, and coverage maintenance without manual intervention or external scheduling.</li>
+  </ul>
+  <div class="phase-verify">
+    <h4>Verification Criteria</h4>
+    <ul>
+      <li>Node operates within defined memory bounds under sustained synchronization</li>
+      <li>Operator can assess node health from CLI output without external tools</li>
+      <li>Artifact stabilization maintains serving readiness across restart cycles</li>
+      <li>Deployment requires no configuration beyond network selection and peer address</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Phase 5 -->
+<div class="phase planned">
+  <div class="phase-header">
+    <span class="phase-title">Phase 5 &mdash; Research Platform</span>
+    <span class="badge badge-planned">Planned</span>
+  </div>
+  <p class="phase-desc">Positioning the deterministic pipeline and supporting infrastructure as a platform for blockchain state machine research.</p>
+  <ul>
+    <li><strong>Deterministic replay validation</strong> &mdash; Expanded replay corpus covering edge cases, epoch boundaries, and extended rollback sequences.</li>
+    <li><strong>Alternative storage engines</strong> &mdash; Evaluation of storage backends beyond LMDB using the five-operation transactional interface.</li>
+    <li><strong>Experimental node configurations</strong> &mdash; Multi-pipeline instantiation for differential analysis on identical block streams.</li>
+    <li><strong>Advanced observability tooling</strong> &mdash; UTxO set analytics, transaction pattern analysis, and long-duration operational trend reporting.</li>
+  </ul>
+  <div class="phase-verify">
+    <h4>Verification Criteria</h4>
+    <ul>
+      <li>Replay corpus covers all Cardano eras and known edge cases</li>
+      <li>At least one alternative storage backend passes shadow verification</li>
+      <li>Multi-pipeline configuration produces comparable results to single-pipeline</li>
+      <li>Observability extensions operate without measurable synchronization impact</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Phase 6 -->
+<div class="phase planned">
+  <div class="phase-header">
+    <span class="phase-title">Phase 6 &mdash; Ecosystem Contribution</span>
+    <span class="badge badge-planned">Planned</span>
+  </div>
+  <p class="phase-desc">Extending TSUNAGI's contributions beyond a single node to the broader blockchain infrastructure landscape.</p>
+  <ul>
+    <li><strong>Long-term independent Cardano implementation</strong> &mdash; Sustained mainnet operation with continuous shadow verification and periodic cross-node digest comparison.</li>
+    <li><strong>Research collaboration</strong> &mdash; Exchange of replay corpora, verification methodologies, and operational experience.</li>
+    <li><strong>Cross-chain UTxO experimentation</strong> &mdash; Abstract UTxO types as a common execution substrate for multiple blockchain families.</li>
+    <li><strong>Infrastructure resilience through client diversity</strong> &mdash; Production-quality alternative for network participants.</li>
+  </ul>
+  <div class="phase-verify">
+    <h4>Verification Criteria</h4>
+    <ul>
+      <li>Sustained mainnet operation with zero state divergence</li>
+      <li>Published verification methodology available for community use</li>
+      <li>At least one cross-chain pipeline processing non-Cardano block data</li>
+      <li>Documented protocol specification feedback from independent implementation</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Phase 7 -->
+<div class="phase planned">
+  <div class="phase-header">
+    <span class="phase-title">Phase 7 &mdash; Adaptive Architecture</span>
+    <span class="badge badge-planned">Research Direction</span>
+  </div>
+  <p class="phase-desc">The adaptive phase extends TSUNAGI from a self-healing node toward a system capable of evidence-bounded operational adaptation and network-level structural observability.</p>
+  <ul>
+    <li><strong>Concentration measurement</strong> &mdash; Observable stake distribution, delegation flow, and infrastructure diversity metrics at the protocol layer. Measurement infrastructure that governance mechanisms can consume, without implementing governance itself.</li>
+    <li><strong>Evidence-bounded state transitions</strong> &mdash; Controlled operational mode shifts triggered by operator-defined thresholds on measured conditions. Auditable transition records with full rollback capability.</li>
+    <li><strong>Anti-capture observability</strong> &mdash; Network-level structural health reporting that makes concentration vectors visible before they become irreversible.</li>
+    <li><strong>Operator policy framework</strong> &mdash; Declarative specification of transition boundaries, evidence thresholds, and authorized operational regimes, enabling adaptive behavior without autonomous decision-making.</li>
+  </ul>
+  <div class="phase-verify">
+    <h4>Verification Criteria</h4>
+    <ul>
+      <li>Concentration metrics accurately reflect known stake distribution on test networks</li>
+      <li>State transitions execute only within operator-defined boundaries and produce auditable records</li>
+      <li>Adaptive decisions are fully reversible and rollback paths are verified</li>
+      <li>No adaptive behavior occurs without explicit operator pre-authorization</li>
+    </ul>
+  </div>
+</div>
+
+<div class="principles">
+  <h2>Guiding Principles</h2>
+  <ul>
+    <li><strong>Forward-only progress.</strong> Each phase builds on verified foundations. No phase compromises the guarantees established by its predecessors.</li>
+    <li><strong>Evidence before claims.</strong> Capabilities are validated through measured results before being documented as complete.</li>
+    <li><strong>Determinism is non-negotiable.</strong> No phase introduces non-deterministic behavior into the ledger pipeline.</li>
+    <li><strong>Operator clarity over developer convenience.</strong> Design decisions favor operational transparency over implementation abstraction.</li>
+    <li><strong>Minimal dependencies.</strong> New capabilities are implemented within the existing dependency set unless a compelling case exists.</li>
+  </ul>
+</div>
+
+<p class="motto">Let It Run. Let It Resolve.</p>
+
+<div class="ft">
+  <p class="fm">Let It Run. Let It Resolve.</p>
+  <p>tsunagi.tech &middot; Independent Cardano infrastructure research &middot; 2026</p>
+</div>
+
+</div>
+
+</body>
+</html>

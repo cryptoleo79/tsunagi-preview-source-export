@@ -1,0 +1,198 @@
+TSUNAGI Full Site Deployment
+=============================
+
+This document explains how to deploy the complete tsunagi.tech
+website to a VPS running nginx.
+
+Web root: /var/www/tsunagi
+
+=== STEP 1: Create directory structure ===
+
+sudo mkdir -p /var/www/tsunagi
+sudo mkdir -p /var/www/tsunagi/assets
+sudo mkdir -p /var/www/tsunagi/whitepaper
+sudo mkdir -p /var/www/tsunagi/manifesto
+sudo mkdir -p /var/www/tsunagi/roadmap
+sudo mkdir -p /var/www/tsunagi/treasury
+sudo mkdir -p /var/www/tsunagi/status
+sudo mkdir -p /var/www/tsunagi/explorer
+sudo mkdir -p /var/www/tsunagi/decode
+sudo mkdir -p /var/www/tsunagi/install
+sudo mkdir -p /var/www/tsunagi/vision
+sudo mkdir -p /var/www/tsunagi/network
+sudo mkdir -p /var/www/tsunagi/docs/whitepaper
+sudo mkdir -p /var/www/tsunagi/docs/articles
+
+=== STEP 2: Copy homepage ===
+
+sudo cp web/index.html /var/www/tsunagi/index.html
+
+=== STEP 3: Copy whitepaper page ===
+
+sudo cp web/whitepaper/index.html /var/www/tsunagi/whitepaper/index.html
+
+=== STEP 4: Copy manifesto page ===
+
+sudo cp web/manifesto/index.html /var/www/tsunagi/manifesto/index.html
+
+=== STEP 5: Copy roadmap page ===
+
+sudo cp web/roadmap/index.html /var/www/tsunagi/roadmap/index.html
+
+=== STEP 6: Copy treasury page ===
+
+sudo cp web/treasury/index.html /var/www/tsunagi/treasury/index.html
+
+=== STEP 6a: Copy status page ===
+
+sudo cp web/status/index.html /var/www/tsunagi/status/index.html
+
+=== STEP 6b: Copy explorer page ===
+
+sudo cp web/explorer/index.html /var/www/tsunagi/explorer/index.html
+
+=== STEP 6c: Copy decode page ===
+
+sudo cp web/decode/index.html /var/www/tsunagi/decode/index.html
+
+=== STEP 6d: Copy install page ===
+
+sudo cp web/install/index.html /var/www/tsunagi/install/index.html
+
+=== STEP 6e: Copy vision page ===
+
+sudo cp web/vision/index.html /var/www/tsunagi/vision/index.html
+
+=== STEP 6f: Copy network page ===
+
+sudo cp web/network/index.html /var/www/tsunagi/network/index.html
+
+=== STEP 7: Copy assets ===
+
+sudo cp docs/public/images/tsunagi-architecture.jpg /var/www/tsunagi/assets/tsunagi-architecture.jpg
+
+# Copy logo (adjust source path if different):
+sudo cp docs/assets/logo/tsunagi-logo-primary.jpeg /var/www/tsunagi/assets/tsunagi-logo-primary.jpeg
+
+=== STEP 8: Copy whitepaper source files ===
+
+# Markdown source (fetched by the HTML whitepaper page):
+sudo cp docs/whitepaper/tsunagi-whitepaper.md /var/www/tsunagi/docs/whitepaper/tsunagi-whitepaper.md
+
+# PDF (linked from Download PDF button):
+sudo cp docs/whitepaper/tsunagi-whitepaper-v1.pdf /var/www/tsunagi/docs/whitepaper/tsunagi-whitepaper-v1.pdf
+
+=== STEP 9: Copy architecture article ===
+
+sudo cp docs/articles/building-tsunagi.md /var/www/tsunagi/docs/articles/building-tsunagi.md
+
+=== STEP 10: Set permissions ===
+
+sudo chown -R www-data:www-data /var/www/tsunagi
+sudo chmod -R 755 /var/www/tsunagi
+
+=== STEP 11: Reload nginx ===
+
+sudo nginx -t && sudo systemctl reload nginx
+
+=== VERIFICATION ===
+
+curl -I https://tsunagi.tech/
+curl -I https://tsunagi.tech/whitepaper/
+curl -I https://tsunagi.tech/manifesto/
+curl -I https://tsunagi.tech/roadmap/
+curl -I https://tsunagi.tech/treasury/
+curl -I https://tsunagi.tech/status/
+curl -I https://tsunagi.tech/explorer/
+curl -I https://tsunagi.tech/decode/
+curl -I https://tsunagi.tech/install/
+curl -I https://tsunagi.tech/vision/
+curl -I https://tsunagi.tech/network/
+curl -I https://tsunagi.tech/assets/tsunagi-architecture.jpg
+curl -I https://tsunagi.tech/assets/tsunagi-logo-primary.jpeg
+curl -I https://tsunagi.tech/docs/whitepaper/tsunagi-whitepaper.md
+curl -I https://tsunagi.tech/docs/whitepaper/tsunagi-whitepaper-v1.pdf
+curl -I https://tsunagi.tech/docs/articles/building-tsunagi.md
+
+=== EXPECTED FILE STRUCTURE ===
+
+/var/www/tsunagi/
+  index.html                              <- Homepage
+  assets/
+    tsunagi-architecture.jpg              <- Architecture diagram
+    tsunagi-logo-primary.jpeg             <- Project logo
+  whitepaper/
+    index.html                            <- HTML whitepaper
+  manifesto/
+    index.html                            <- HTML manifesto
+  roadmap/
+    index.html                            <- HTML roadmap
+  treasury/
+    index.html                            <- HTML treasury
+  status/
+    index.html                            <- Status dashboard (reads /status.json)
+  explorer/
+    index.html                            <- Block explorer (reads /status.json)
+  decode/
+    index.html                            <- Block decoder (reads /status.json)
+  install/
+    index.html                            <- Installation guide (static)
+  vision/
+    index.html                            <- Vision / MUSUBI page (static)
+  network/
+    index.html                            <- Network monitor scaffold (static)
+  docs/
+    whitepaper/
+      tsunagi-whitepaper.md               <- Markdown source (fetched by whitepaper page)
+      tsunagi-whitepaper-v1.pdf           <- PDF download
+    articles/
+      building-tsunagi.md                 <- Architecture article
+
+=== NGINX CONFIGURATION NOTES ===
+
+Ensure nginx is configured to:
+- Serve index.html for directory requests (try_files $uri $uri/ =404)
+- Serve correct MIME types for .md files (text/markdown or text/plain)
+- Serve correct MIME types for .pdf files (application/pdf)
+- Enable gzip for HTML, CSS, JS, and text files
+
+Example location block:
+
+  location / {
+      root /var/www/tsunagi;
+      index index.html;
+      try_files $uri $uri/ $uri/index.html =404;
+  }
+
+  location ~* \.(md)$ {
+      root /var/www/tsunagi;
+      default_type text/plain;
+  }
+
+=== PAGE LINKS ===
+
+Homepage:      https://tsunagi.tech/
+Whitepaper:    https://tsunagi.tech/whitepaper/
+Manifesto:     https://tsunagi.tech/manifesto/
+Roadmap:       https://tsunagi.tech/roadmap/
+Treasury:      https://tsunagi.tech/treasury/
+Status:        https://tsunagi.tech/status/
+Explorer:      https://tsunagi.tech/explorer/
+Decode:        https://tsunagi.tech/decode/
+Install:       https://tsunagi.tech/install/
+Vision:        https://tsunagi.tech/vision/
+Network:       https://tsunagi.tech/network/
+GitHub:        https://github.com/cryptoleo79/tsunagi-follower
+PDF Download:  https://tsunagi.tech/docs/whitepaper/tsunagi-whitepaper-v1.pdf
+
+=== NOTES ===
+
+- All HTML pages are fully self-contained with inline CSS.
+- The whitepaper page uses JavaScript to fetch and render markdown.
+- The status, explorer, and decode pages use JavaScript to fetch
+  /status.json for live telemetry data.
+- All other pages (manifesto, roadmap, treasury, install, vision,
+  network) are pure static HTML/CSS.
+- No external CDN dependencies or frameworks are used on any page.
+- The logo file name may vary. Check web/index.html for the exact
+  src path referenced in the hero section.

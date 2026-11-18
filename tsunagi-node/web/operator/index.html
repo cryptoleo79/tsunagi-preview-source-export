@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TSUNAGI Operator Command Center</title>
+<meta name="description" content="TSUNAGI operator command center: live node telemetry, network activity, block processing, and confirmation tracking.">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #05080e;
+  --bg-surface: #0a0f1a;
+  --bg-card: rgba(12,18,30,0.65);
+  --bg-card-hover: rgba(16,24,40,0.8);
+  --border: rgba(80,120,180,0.10);
+  --border-hover: rgba(80,120,180,0.28);
+  --border-accent: rgba(80,140,220,0.35);
+  --text: #d0d6e2;
+  --text-m: #7a8598;
+  --text-d: #4c5668;
+  --accent: #3d6fa8;
+  --accent-l: #5a8ec8;
+  --white: #eceef3;
+  --green: #3da86f;
+  --green-bg: rgba(61,168,111,0.08);
+  --green-border: rgba(61,168,111,0.25);
+  --yellow: #a89b3d;
+  --yellow-bg: rgba(168,155,61,0.08);
+  --yellow-border: rgba(168,155,61,0.25);
+  --red: #a83d3d;
+  --red-bg: rgba(168,61,61,0.08);
+  --red-border: rgba(168,61,61,0.25);
+  --mono: 'SF Mono','Cascadia Code','Fira Code','Consolas',monospace;
+  --sans: -apple-system,BlinkMacSystemFont,'Segoe UI','Inter',Helvetica,Arial,sans-serif;
+}
+html { scroll-behavior: smooth; }
+body { font-family: var(--sans); background: var(--bg); color: var(--text); line-height: 1.6; overflow-x: hidden; }
+
+/* ── Utility Bar ── */
+.ub { position:fixed; top:0; left:0; right:0; z-index:100; height:48px; display:flex; align-items:center; justify-content:space-between; padding:0 28px; background:rgba(5,8,14,0.92); backdrop-filter:blur(14px); border-bottom:1px solid var(--border); }
+.ub-l { display:flex; align-items:center; gap:20px; }
+.ub-brand { font-size:0.82rem; font-weight:700; letter-spacing:0.14em; color:var(--white); text-decoration:none; }
+.ub-nav { display:flex; gap:6px; flex-wrap:wrap; }
+.ub-nav a { font-size:0.75rem; font-weight:500; letter-spacing:0.03em; color:var(--text-m); text-decoration:none; padding:5px 12px; border-radius:4px; border:1px solid transparent; transition:all 0.2s; }
+.ub-nav a:hover { color:var(--white); border-color:var(--border-accent); background:rgba(60,112,180,0.08); }
+.lang-switch { display:flex; align-items:center; gap:6px; margin-left:12px; font-size:0.75rem; white-space:nowrap; }
+.lang-switch a { text-decoration:none; color:var(--text-m); transition:color 0.2s ease; }
+.lang-switch a:hover { color:var(--text); }
+.lang-cur { color:var(--accent-l) !important; font-weight:600; }
+.lang-div { opacity:0.4; }
+
+/* ── Page ── */
+.pg { max-width:1100px; margin:0 auto; padding:80px 28px 60px; }
+
+/* ── Node Header ── */
+.node-hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:32px; padding-top:24px; }
+.node-hdr-left { display:flex; align-items:center; gap:16px; }
+.node-hdr h1 { font-size:1.5rem; font-weight:700; color:var(--white); letter-spacing:0.04em; }
+.node-hdr-sub { font-size:0.82rem; color:var(--text-m); }
+.node-hdr-right { display:flex; align-items:center; gap:12px; }
+.refresh-ind { font-family:var(--mono); font-size:0.65rem; color:var(--text-d); }
+.refresh-dot { display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--green); margin-right:6px; animation:pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+
+/* ── Status Pills ── */
+.pill { display:inline-block; font-family:var(--mono); font-size:0.62rem; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; padding:3px 10px; border-radius:4px; }
+.pill-healthy { color:var(--green); background:var(--green-bg); border:1px solid var(--green-border); }
+.pill-warn { color:var(--yellow); background:var(--yellow-bg); border:1px solid var(--yellow-border); }
+.pill-critical { color:var(--red); background:var(--red-bg); border:1px solid var(--red-border); }
+.pill-offline { color:var(--text-d); background:rgba(76,86,104,0.08); border:1px solid rgba(76,86,104,0.25); }
+.pill-connect { color:var(--green); background:var(--green-bg); border:1px solid var(--green-border); }
+.pill-disconnect { color:var(--red); background:var(--red-bg); border:1px solid var(--red-border); }
+.pill-block { color:var(--accent-l); background:rgba(60,112,180,0.08); border:1px solid var(--border-accent); }
+.pill-positive { color:var(--green); }
+.pill-negative { color:var(--red); }
+.pill-zero { color:var(--text-d); }
+.pill-ready { color:var(--green); background:var(--green-bg); border:1px solid var(--green-border); }
+.pill-not-leader { color:var(--accent-l); background:rgba(60,112,180,0.08); border:1px solid var(--border-accent); }
+.pill-not-configured { color:var(--text-d); background:rgba(76,86,104,0.08); border:1px solid rgba(76,86,104,0.25); }
+.pill-error { color:var(--red); background:var(--red-bg); border:1px solid var(--red-border); }
+
+/* ── Material Dots ── */
+.mat-dots { display:inline-flex; gap:4px; margin-top:4px; }
+.mat-dot { width:6px; height:6px; border-radius:50%; }
+.mat-dot-on { background:var(--green); }
+.mat-dot-off { background:var(--text-d); opacity:0.4; }
+
+/* ── Health Panel ── */
+.health-panel { background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:20px 24px; margin-bottom:20px; transition:border-color 0.25s; position:relative; overflow:hidden; }
+.health-panel:hover { border-color:var(--border-hover); }
+.health-panel::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg, transparent, var(--accent), transparent); opacity:0; transition:opacity 0.3s; }
+.health-panel:hover::before { opacity:1; }
+.health-top { display:flex; align-items:center; gap:18px; margin-bottom:14px; }
+.health-score { font-family:var(--mono); font-size:2rem; font-weight:700; color:var(--white); line-height:1; }
+.health-score.muted { color:var(--text-d); font-weight:400; }
+.health-label { font-family:var(--mono); font-size:0.62rem; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent-l); }
+.health-sub { font-family:var(--mono); font-size:0.68rem; color:var(--text-d); margin-top:2px; }
+.health-components { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; }
+.health-comp { background:rgba(10,15,26,0.5); border:1px solid var(--border); border-radius:6px; padding:10px 12px; text-align:center; }
+.health-comp-label { font-family:var(--mono); font-size:0.52rem; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-d); margin-bottom:4px; }
+.health-comp-val { font-family:var(--mono); font-size:1rem; font-weight:700; color:var(--white); }
+.health-comp-val.muted { color:var(--text-d); font-weight:400; }
+.health-comp-val.score-excellent { color:var(--green); }
+.health-comp-val.score-healthy { color:var(--accent-l); }
+.health-comp-val.score-degraded { color:var(--yellow); }
+.health-comp-val.score-critical { color:var(--red); }
+.health-unavailable { font-size:0.82rem; color:var(--text-d); font-style:italic; padding:4px 0; }
+
+/* ── Summary Strip ── */
+.sum-strip { display:grid; grid-template-columns:repeat(7,1fr); gap:14px; margin-bottom:32px; }
+.sum-card { background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:16px 18px; transition:border-color 0.25s; }
+.sum-card:hover { border-color:var(--border-hover); }
+.sum-tag { font-family:var(--mono); font-size:0.54rem; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-d); margin-bottom:8px; }
+.sum-primary { font-family:var(--mono); font-size:1.15rem; font-weight:700; color:var(--white); margin-bottom:4px; }
+.sum-primary.muted { color:var(--text-d); font-weight:400; }
+.sum-secondary { font-family:var(--mono); font-size:0.72rem; color:var(--text-m); }
+.sum-secondary.muted { color:var(--text-d); }
+
+/* ── Detail Panels ── */
+.panels { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+.panel { background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:22px 24px; transition:border-color 0.25s; }
+.panel:hover { border-color:var(--border-hover); }
+.panel-hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+.panel-title { font-family:var(--mono); font-size:0.62rem; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent-l); }
+.panel-badge { font-family:var(--mono); font-size:0.6rem; color:var(--text-d); }
+
+/* ── Tables (shared) ── */
+.op-table { width:100%; border-collapse:collapse; font-family:var(--mono); font-size:0.75rem; }
+.op-table th { font-size:0.56rem; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-d); text-align:right; padding:6px 8px; border-bottom:1px solid var(--border); }
+.op-table th:first-child { text-align:left; }
+.op-table td { padding:5px 8px; border-bottom:1px solid rgba(80,120,180,0.06); color:var(--text); text-align:right; }
+.op-table td:first-child { text-align:left; color:var(--accent-l); }
+.op-table tr:hover td { background:rgba(60,112,180,0.04); }
+
+/* ── Empty States ── */
+.empty-state { font-size:0.82rem; color:var(--text-d); padding:18px 0; text-align:center; font-style:italic; }
+
+/* ── Footer ── */
+.ft { text-align:center; padding:40px 0 32px; border-top:1px solid var(--border); margin-top:48px; }
+.ft p { font-size:0.78rem; color:var(--text-d); letter-spacing:0.03em; }
+.ft .fm { font-size:0.88rem; color:var(--text-m); font-weight:600; margin-bottom:8px; }
+
+/* ── Responsive ── */
+@media(max-width:1200px){
+  .sum-strip { grid-template-columns:repeat(4,1fr); }
+}
+@media(max-width:1024px){
+  .sum-strip { grid-template-columns:repeat(3,1fr); }
+  .panels { grid-template-columns:1fr; }
+  .health-components { grid-template-columns:repeat(3,1fr); }
+}
+@media(max-width:768px){
+  .pg { padding:70px 18px 40px; }
+  .sum-strip { grid-template-columns:repeat(2,1fr); }
+  .node-hdr { flex-direction:column; align-items:flex-start; gap:10px; }
+  .health-components { grid-template-columns:repeat(2,1fr); }
+  .ub { padding:0 16px; }
+  .ub-nav { gap:2px; }
+  .ub-nav a { padding:5px 8px; font-size:0.7rem; }
+  .op-table { font-size:0.7rem; }
+}
+@media(max-width:480px){
+  .pg { padding:64px 14px 32px; }
+  .sum-strip { grid-template-columns:1fr; }
+  .node-hdr h1 { font-size:1.25rem; }
+  .ub-brand { font-size:0.75rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- Utility Bar (shared) -->
+<div id="nav-container"></div>
+<script src="/assets/nav.js"></script>
+
+<div class="pg">
+
+  <!-- Node Header -->
+  <div class="node-hdr">
+    <div class="node-hdr-left">
+      <div>
+        <h1>Operator Command Center</h1>
+        <div class="node-hdr-sub" id="oc-network">&mdash;</div>
+      </div>
+      <span class="pill pill-offline" id="oc-status-pill">Offline</span>
+    </div>
+    <div class="node-hdr-right">
+      <span class="pill pill-offline" id="oc-sync-pill" style="font-size:0.58rem;">Sync: &mdash;</span>
+      <div class="refresh-ind"><span class="refresh-dot"></span>Auto-refresh 10s</div>
+      <div class="refresh-ind" id="oc-updated">&mdash;</div>
+    </div>
+  </div>
+
+  <!-- Node Health -->
+  <div class="health-panel" id="health-panel">
+    <div class="health-top">
+      <div class="health-score muted" id="h-score">&mdash;</div>
+      <div>
+        <div class="health-label">Node Health</div>
+        <div class="health-sub" id="h-state">Waiting for health data&hellip;</div>
+      </div>
+      <span class="pill pill-offline" id="h-state-pill" style="margin-left:auto;">Offline</span>
+    </div>
+    <div class="health-components">
+      <div class="health-comp">
+        <div class="health-comp-label">Peer</div>
+        <div class="health-comp-val muted" id="h-peer">&mdash;</div>
+      </div>
+      <div class="health-comp">
+        <div class="health-comp-label">Slot</div>
+        <div class="health-comp-val muted" id="h-slot-score">&mdash;</div>
+      </div>
+      <div class="health-comp">
+        <div class="health-comp-label">Block</div>
+        <div class="health-comp-val muted" id="h-block-score">&mdash;</div>
+      </div>
+      <div class="health-comp">
+        <div class="health-comp-label">Confirm</div>
+        <div class="health-comp-val muted" id="h-confirm">&mdash;</div>
+      </div>
+      <div class="health-comp">
+        <div class="health-comp-label">Mempool</div>
+        <div class="health-comp-val muted" id="h-mempool">&mdash;</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary Strip -->
+  <div class="sum-strip">
+    <!-- Node / Sync -->
+    <div class="sum-card">
+      <div class="sum-tag">Node / Sync</div>
+      <div class="sum-primary muted" id="sc-slot">&mdash;</div>
+      <div class="sum-secondary muted" id="sc-tip-age">&mdash;</div>
+    </div>
+    <!-- Network -->
+    <div class="sum-card">
+      <div class="sum-tag">Network</div>
+      <div class="sum-primary muted" id="sc-net-events">&mdash;</div>
+      <div class="sum-secondary muted" id="sc-net-detail">&mdash;</div>
+    </div>
+    <!-- Slots -->
+    <div class="sum-card">
+      <div class="sum-tag">Slot Rhythm</div>
+      <div class="sum-primary muted" id="sc-slot-gap">&mdash;</div>
+      <div class="sum-secondary muted" id="sc-slot-detail">&mdash;</div>
+    </div>
+    <!-- Mempool -->
+    <div class="sum-card">
+      <div class="sum-tag">Mempool</div>
+      <div class="sum-primary muted" id="sc-mempool">&mdash;</div>
+      <div class="sum-secondary muted" id="sc-mempool-detail">&mdash;</div>
+    </div>
+    <!-- Confirmations -->
+    <div class="sum-card">
+      <div class="sum-tag">Confirmations</div>
+      <div class="sum-primary muted" id="sc-confirm">&mdash;</div>
+      <div class="sum-secondary muted" id="sc-confirm-detail">&mdash;</div>
+    </div>
+    <!-- Blocks -->
+    <div class="sum-card">
+      <div class="sum-tag">Blocks</div>
+      <div class="sum-primary muted" id="sc-blocks">&mdash;</div>
+      <div class="sum-secondary muted" id="sc-blocks-detail">&mdash;</div>
+    </div>
+    <!-- Producer -->
+    <div class="sum-card">
+      <div class="sum-tag">Producer</div>
+      <div class="sum-primary muted" id="sc-producer">&mdash;</div>
+      <div class="sum-secondary muted" id="sc-producer-detail">&mdash;</div>
+      <div class="mat-dots" id="sc-producer-dots">
+        <span class="mat-dot mat-dot-off" id="sc-dot-vrf" title="VRF"></span>
+        <span class="mat-dot mat-dot-off" id="sc-dot-kes" title="KES"></span>
+        <span class="mat-dot mat-dot-off" id="sc-dot-pool" title="Pool ID"></span>
+        <span class="mat-dot mat-dot-off" id="sc-dot-stake" title="Stake"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detail Panels -->
+  <div class="panels">
+
+    <!-- Recent Network Activity -->
+    <div class="panel">
+      <div class="panel-hdr">
+        <div class="panel-title">Recent Network Activity</div>
+        <div class="panel-badge" id="pn-net-count">&mdash;</div>
+      </div>
+      <div class="empty-state" id="pn-net-empty">Waiting for network data&hellip;</div>
+      <table class="op-table" id="pn-net-table" style="display:none;">
+        <thead>
+          <tr><th>Event</th><th>Peer</th><th>Detail</th><th>Age</th></tr>
+        </thead>
+        <tbody id="pn-net-tbody"></tbody>
+      </table>
+    </div>
+
+    <!-- Recent Confirmations -->
+    <div class="panel">
+      <div class="panel-hdr">
+        <div class="panel-title">Recent Confirmations</div>
+        <div class="panel-badge" id="pn-conf-count">&mdash;</div>
+      </div>
+      <div class="empty-state" id="pn-conf-empty">Waiting for confirmation data&hellip;</div>
+      <table class="op-table" id="pn-conf-table" style="display:none;">
+        <thead>
+          <tr><th>TxID</th><th>Block</th><th>Time</th><th>Age</th></tr>
+        </thead>
+        <tbody id="pn-conf-tbody"></tbody>
+      </table>
+    </div>
+
+    <!-- Recent Blocks -->
+    <div class="panel">
+      <div class="panel-hdr">
+        <div class="panel-title">Recent Blocks</div>
+        <div class="panel-badge" id="pn-blk-count">&mdash;</div>
+      </div>
+      <div class="empty-state" id="pn-blk-empty">Waiting for block data&hellip;</div>
+      <table class="op-table" id="pn-blk-table" style="display:none;">
+        <thead>
+          <tr><th>Block</th><th>Slot</th><th>Tx</th><th>Delta</th><th>Age</th></tr>
+        </thead>
+        <tbody id="pn-blk-tbody"></tbody>
+      </table>
+    </div>
+
+    <!-- Slot Rhythm -->
+    <div class="panel">
+      <div class="panel-hdr">
+        <div class="panel-title">Slot Rhythm</div>
+        <div class="panel-badge" id="pn-slot-count">&mdash;</div>
+      </div>
+      <div class="empty-state" id="pn-slot-empty">Waiting for slot rhythm data&hellip;</div>
+      <table class="op-table" id="pn-slot-table" style="display:none;">
+        <thead>
+          <tr><th>Slot</th><th>Block</th><th>Gap</th><th>Age</th></tr>
+        </thead>
+        <tbody id="pn-slot-tbody"></tbody>
+      </table>
+    </div>
+
+    <!-- Producer Readiness -->
+    <div class="panel">
+      <div class="panel-hdr">
+        <div class="panel-title">Producer Readiness</div>
+        <div class="panel-badge" id="pn-prod-badge">&mdash;</div>
+      </div>
+      <div class="empty-state" id="pn-prod-empty">Waiting for producer data&hellip;</div>
+      <table class="op-table" id="pn-prod-table" style="display:none;">
+        <thead>
+          <tr><th>Field</th><th>Value</th></tr>
+        </thead>
+        <tbody id="pn-prod-tbody"></tbody>
+      </table>
+    </div>
+
+    <!-- Producer Dry-Run -->
+    <div class="panel">
+      <div class="panel-hdr">
+        <div class="panel-title">Producer Dry-Run</div>
+        <div class="panel-badge" id="pn-dr-badge">&mdash;</div>
+      </div>
+      <div class="empty-state" id="pn-dr-empty">Waiting for dry-run data&hellip;</div>
+      <table class="op-table" id="pn-dr-table" style="display:none;">
+        <thead>
+          <tr><th>Field</th><th>Value</th></tr>
+        </thead>
+        <tbody id="pn-dr-tbody"></tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- Footer -->
+  <div class="ft">
+    <p class="fm">Let It Run. Let It Resolve.</p>
+    <p>tsunagi.tech &middot; Independent Cardano infrastructure research</p>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  var INTERVAL = 10000;
+  var MAX_ROWS = 8;
+  var DASH = '\u2014';
+
+  function el(id) { return document.getElementById(id); }
+
+  // ── Helpers ──
+
+  function formatNum(v) {
+    if (v === null || v === undefined) return DASH;
+    if (typeof v === 'number') return v.toLocaleString();
+    return String(v);
+  }
+
+  function formatAgeSeconds(s) {
+    if (s === null || s === undefined) return DASH;
+    s = Math.floor(s);
+    if (s < 0) s = 0;
+    if (s < 60) return s + 's';
+    if (s < 3600) return Math.floor(s / 60) + 'm ' + (s % 60) + 's';
+    if (s < 86400) return Math.floor(s / 3600) + 'h ' + Math.floor((s % 3600) / 60) + 'm';
+    return Math.floor(s / 86400) + 'd ' + Math.floor((s % 86400) / 3600) + 'h';
+  }
+
+  function formatTimestamp(iso) {
+    if (!iso) return DASH;
+    try {
+      var d = new Date(iso);
+      var now = Date.now();
+      var diff = Math.floor((now - d.getTime()) / 1000);
+      if (diff < 0) diff = 0;
+      return formatAgeSeconds(diff) + ' ago';
+    } catch (e) { return iso; }
+  }
+
+  function formatUnixAge(unix) {
+    if (unix === null || unix === undefined) return DASH;
+    var now = Math.floor(Date.now() / 1000);
+    var diff = now - unix;
+    if (diff < 0) diff = 0;
+    return formatAgeSeconds(diff) + ' ago';
+  }
+
+  function formatDelta(d) {
+    if (d === null || d === undefined) return DASH;
+    if (d > 0) return '+' + d;
+    return String(d);
+  }
+
+  function deltaClass(d) {
+    if (d === null || d === undefined) return '';
+    if (d > 0) return 'pill-positive';
+    if (d < 0) return 'pill-negative';
+    return 'pill-zero';
+  }
+
+  function truncateHash(h, len) {
+    if (!h) return DASH;
+    len = len || 12;
+    if (h.length <= len) return h;
+    var half = Math.floor(len / 2);
+    return h.slice(0, half) + '\u2026' + h.slice(-half);
+  }
+
+  function setVal(id, text, active) {
+    var e = el(id);
+    if (!e) return;
+    e.textContent = text;
+    e.className = e.className.replace(/\s*muted/g, '');
+    if (!active) e.className += ' muted';
+  }
+
+  function statusPillClass(status) {
+    if (!status) return 'pill-offline';
+    var s = String(status).toLowerCase();
+    if (s === 'healthy') return 'pill-healthy';
+    if (s === 'warn' || s === 'warning') return 'pill-warn';
+    if (s === 'critical') return 'pill-critical';
+    return 'pill-offline';
+  }
+
+  function eventPillClass(ev) {
+    if (!ev) return '';
+    if (ev === 'peer_connect') return 'pill-connect';
+    if (ev === 'peer_disconnect') return 'pill-disconnect';
+    if (ev === 'block_received') return 'pill-block';
+    return '';
+  }
+
+  function formatEventName(ev) {
+    if (!ev) return DASH;
+    return ev.replace(/_/g, ' ');
+  }
+
+  function showTable(tableId, emptyId, hasData) {
+    var t = el(tableId);
+    var e = el(emptyId);
+    if (!t || !e) return;
+    if (hasData) {
+      t.style.display = 'table';
+      e.style.display = 'none';
+    } else {
+      t.style.display = 'none';
+      e.style.display = 'block';
+    }
+  }
+
+  function esc(s) {
+    if (!s) return '';
+    var d = document.createElement('span');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  function healthPillClass(state) {
+    if (!state) return 'pill-offline';
+    var s = String(state).toLowerCase();
+    if (s === 'excellent') return 'pill-healthy';
+    if (s === 'healthy') return 'pill-healthy';
+    if (s === 'degraded') return 'pill-warn';
+    if (s === 'critical') return 'pill-critical';
+    return 'pill-offline';
+  }
+
+  function scoreColorClass(score) {
+    if (score === null || score === undefined) return 'muted';
+    if (score >= 90) return 'score-excellent';
+    if (score >= 75) return 'score-healthy';
+    if (score >= 60) return 'score-degraded';
+    return 'score-critical';
+  }
+
+  function producerPillClass(state) {
+    if (!state) return 'pill-offline';
+    var s = String(state).toUpperCase();
+    if (s === 'READY_LOCAL_CANDIDATE') return 'pill-ready';
+    if (s === 'NOT_LEADER') return 'pill-not-leader';
+    if (s === 'NOT_CONFIGURED') return 'pill-not-configured';
+    if (s === 'ERROR') return 'pill-error';
+    return 'pill-offline';
+  }
+
+  function producerStateLabel(state) {
+    if (!state) return 'Offline';
+    var s = String(state).toUpperCase();
+    if (s === 'READY_LOCAL_CANDIDATE') return 'Ready';
+    if (s === 'NOT_LEADER') return 'Not Leader';
+    if (s === 'NOT_CONFIGURED') return 'Not Configured';
+    if (s === 'ERROR') return 'Error';
+    if (s === 'OFFLINE') return 'Offline';
+    return state;
+  }
+
+  function setHealthScore(id, score) {
+    var e = el(id);
+    if (!e) return;
+    if (score === null || score === undefined) {
+      e.textContent = DASH;
+      e.className = 'health-comp-val muted';
+    } else {
+      e.textContent = score;
+      e.className = 'health-comp-val ' + scoreColorClass(score);
+    }
+  }
+
+  // ── Panel Updaters ──
+
+  function updateOperator(d) {
+    if (!d) return;
+    var sync = d.sync || {};
+    var pipe = d.pipeline || {};
+    var ledg = d.ledger || {};
+
+    // Status pill
+    var pillEl = el('oc-status-pill');
+    if (pillEl) {
+      var pc = statusPillClass(sync.status);
+      pillEl.className = 'pill ' + pc;
+      pillEl.textContent = sync.status ? (sync.status.charAt(0).toUpperCase() + sync.status.slice(1)) : 'Offline';
+    }
+
+    // Network label
+    var net = (d.runtime && d.runtime.network) ? d.runtime.network : null;
+    setVal('oc-network', net ? ('Network: ' + net) : 'Network: unknown', !!net);
+
+    // Sync state pill
+    var syncPill = el('oc-sync-pill');
+    if (syncPill && sync.tip_age_seconds != null) {
+      var age = sync.tip_age_seconds;
+      var syncLabel = age <= 120 ? 'Following' : (age <= 600 ? 'Syncing' : 'Stalled');
+      var syncClass = age <= 120 ? 'pill-healthy' : (age <= 600 ? 'pill-warn' : 'pill-critical');
+      syncPill.textContent = 'Sync: ' + syncLabel + ' (' + formatAgeSeconds(age) + ')';
+      syncPill.className = 'pill ' + syncClass;
+    }
+
+    // Updated timestamp
+    var ts = (d.runtime && d.runtime.generated_at) ? d.runtime.generated_at : null;
+    el('oc-updated').textContent = ts ? ('Updated ' + formatTimestamp(ts)) : DASH;
+
+    // Summary card: Node/Sync
+    setVal('sc-slot', sync.slot != null ? ('Slot ' + formatNum(sync.slot)) : DASH, sync.slot != null);
+    var tipText = sync.tip_age_seconds != null ? ('Tip age: ' + formatAgeSeconds(sync.tip_age_seconds)) : DASH;
+    if (sync.block != null) tipText = 'Block ' + formatNum(sync.block) + ' | ' + tipText;
+    setVal('sc-tip-age', tipText, sync.tip_age_seconds != null);
+
+    // Summary card: Blocks (from operator.json pipeline)
+    setVal('sc-blocks', pipe.blocks_processed != null ? formatNum(pipe.blocks_processed) + ' processed' : DASH, pipe.blocks_processed != null);
+    var blkDetail = [];
+    if (pipe.rollbacks != null) blkDetail.push(formatNum(pipe.rollbacks) + ' rollbacks');
+    if (ledg.utxo_estimate != null) blkDetail.push(formatNum(ledg.utxo_estimate) + ' UTxO');
+    setVal('sc-blocks-detail', blkDetail.length > 0 ? blkDetail.join(' | ') : DASH, blkDetail.length > 0);
+  }
+
+  function updateNetwork(d) {
+    if (!d) return;
+    setVal('sc-net-events', d.event_count != null ? formatNum(d.event_count) + ' events' : DASH, d.event_count != null);
+    var parts = [];
+    if (d.connect_count != null) parts.push(d.connect_count + ' conn');
+    if (d.disconnect_count != null) parts.push(d.disconnect_count + ' disc');
+    if (d.block_event_count != null) parts.push(d.block_event_count + ' blocks');
+    setVal('sc-net-detail', parts.length > 0 ? parts.join(' / ') : DASH, parts.length > 0);
+
+    // Panel badge
+    el('pn-net-count').textContent = d.event_count != null ? (d.event_count + ' total') : DASH;
+
+    // Table
+    var events = d.recent_events || [];
+    var rows = events.slice(0, MAX_ROWS);
+    showTable('pn-net-table', 'pn-net-empty', rows.length > 0);
+
+    if (rows.length > 0) {
+      var tbody = el('pn-net-tbody');
+      tbody.innerHTML = '';
+      for (var i = 0; i < rows.length; i++) {
+        var e = rows[i];
+        var ec = eventPillClass(e.event);
+        var detail = [];
+        if (e.slot != null) detail.push('slot ' + e.slot);
+        if (e.block != null) detail.push('block ' + e.block);
+        if (e.reason) detail.push(e.reason);
+        var tr = document.createElement('tr');
+        tr.innerHTML =
+          '<td><span class="pill ' + esc(ec) + '">' + esc(formatEventName(e.event)) + '</span></td>' +
+          '<td style="text-align:left;">' + esc(e.peer || DASH) + '</td>' +
+          '<td style="text-align:left;color:var(--text-m);font-size:0.7rem;">' + esc(detail.join(' | ') || DASH) + '</td>' +
+          '<td>' + esc(formatTimestamp(e.timestamp)) + '</td>';
+        tbody.appendChild(tr);
+      }
+    }
+  }
+
+  function updateSlots(d) {
+    if (!d) return;
+    setVal('sc-slot-gap', d.avg_gap != null ? (d.avg_gap.toFixed(1) + 's avg gap') : DASH, d.avg_gap != null);
+    var slotParts = [];
+    if (d.observation_count != null) slotParts.push(d.observation_count + ' observed');
+    if (d.latest_gap != null) slotParts.push('last gap ' + d.latest_gap + 's');
+    setVal('sc-slot-detail', slotParts.length > 0 ? slotParts.join(' | ') : DASH, slotParts.length > 0);
+
+    el('pn-slot-count').textContent = d.observation_count != null ? (d.observation_count + ' observations') : DASH;
+
+    var obs = d.recent_observations || [];
+    var rows = obs.slice(0, MAX_ROWS);
+    showTable('pn-slot-table', 'pn-slot-empty', rows.length > 0);
+
+    if (rows.length > 0) {
+      var tbody = el('pn-slot-tbody');
+      tbody.innerHTML = '';
+      for (var i = 0; i < rows.length; i++) {
+        var o = rows[i];
+        var tr = document.createElement('tr');
+        tr.innerHTML =
+          '<td>' + (o.slot != null ? formatNum(o.slot) : DASH) + '</td>' +
+          '<td>' + (o.block != null ? formatNum(o.block) : DASH) + '</td>' +
+          '<td>' + (o.gap != null ? (o.gap + 's') : DASH) + '</td>' +
+          '<td>' + esc(formatTimestamp(o.timestamp)) + '</td>';
+        tbody.appendChild(tr);
+      }
+    }
+  }
+
+  function updateMempool(d) {
+    if (!d) return;
+    var count = d.submission_count != null ? d.submission_count : (d.recent_submissions ? d.recent_submissions.length : null);
+    setVal('sc-mempool', count != null ? formatNum(count) + ' submissions' : DASH, count != null);
+    var parts = [];
+    if (d.recent_submissions && d.recent_submissions.length > 0) {
+      var latest = d.recent_submissions[0];
+      if (latest && latest.fee != null) parts.push('last fee: ' + formatNum(latest.fee));
+    }
+    setVal('sc-mempool-detail', parts.length > 0 ? parts.join(' | ') : 'No recent submissions', parts.length > 0);
+  }
+
+  function updateConfirmations(d) {
+    if (!d) return;
+    var confirmed = d.confirmed_count != null ? d.confirmed_count : 0;
+    var pending = d.pending_count != null ? d.pending_count : 0;
+    setVal('sc-confirm', confirmed + ' confirmed', confirmed > 0);
+    setVal('sc-confirm-detail', pending + ' pending', true);
+
+    el('pn-conf-count').textContent = confirmed + ' confirmed, ' + pending + ' pending';
+
+    var recent = d.recent_confirmed || [];
+    var rows = recent.slice(0, MAX_ROWS);
+    showTable('pn-conf-table', 'pn-conf-empty', rows.length > 0);
+
+    if (rows.length > 0) {
+      var tbody = el('pn-conf-tbody');
+      tbody.innerHTML = '';
+      for (var i = 0; i < rows.length; i++) {
+        var c = rows[i];
+        var tr = document.createElement('tr');
+        tr.innerHTML =
+          '<td>' + esc(truncateHash(c.txid, 14)) + '</td>' +
+          '<td>' + (c.block != null ? formatNum(c.block) : DASH) + '</td>' +
+          '<td>' + (c.confirmation_seconds != null ? formatAgeSeconds(c.confirmation_seconds) : DASH) + '</td>' +
+          '<td>' + esc(formatTimestamp(c.timestamp)) + '</td>';
+        tbody.appendChild(tr);
+      }
+    }
+  }
+
+  function updateBlocks(d) {
+    if (!d) return;
+    var recent = d.recent_blocks || [];
+    var rows = recent.slice(0, MAX_ROWS);
+    el('pn-blk-count').textContent = rows.length > 0 ? (rows.length + ' recent') : DASH;
+    showTable('pn-blk-table', 'pn-blk-empty', rows.length > 0);
+
+    if (rows.length > 0) {
+      var tbody = el('pn-blk-tbody');
+      tbody.innerHTML = '';
+      for (var i = 0; i < rows.length; i++) {
+        var b = rows[i];
+        var dc = deltaClass(b.utxo_delta != null ? b.utxo_delta : b.delta);
+        var dv = b.utxo_delta != null ? b.utxo_delta : b.delta;
+        var tr = document.createElement('tr');
+        tr.innerHTML =
+          '<td>' + (b.block_no != null ? formatNum(b.block_no) : (b.block != null ? formatNum(b.block) : DASH)) + '</td>' +
+          '<td>' + (b.slot != null ? formatNum(b.slot) : DASH) + '</td>' +
+          '<td>' + (b.tx_count != null ? b.tx_count : DASH) + '</td>' +
+          '<td class="' + esc(dc) + '">' + esc(formatDelta(dv)) + '</td>' +
+          '<td>' + esc(formatTimestamp(b.timestamp)) + '</td>';
+        tbody.appendChild(tr);
+      }
+    }
+  }
+
+  function updateHealth(d) {
+    if (!d) return;
+    var scoreEl = el('h-score');
+    if (scoreEl) {
+      if (d.score != null) {
+        scoreEl.textContent = d.score;
+        scoreEl.className = 'health-score';
+      } else {
+        scoreEl.textContent = DASH;
+        scoreEl.className = 'health-score muted';
+      }
+    }
+    var stateEl = el('h-state');
+    if (stateEl) {
+      stateEl.textContent = d.state ? (d.state.charAt(0).toUpperCase() + d.state.slice(1)) : 'Unknown';
+    }
+    var pillEl = el('h-state-pill');
+    if (pillEl) {
+      var pc = healthPillClass(d.state);
+      pillEl.className = 'pill ' + pc;
+      pillEl.textContent = d.state ? (d.state.charAt(0).toUpperCase() + d.state.slice(1)) : 'Offline';
+    }
+    setHealthScore('h-peer', d.peer_score);
+    setHealthScore('h-slot-score', d.slot_score);
+    setHealthScore('h-block-score', d.block_score);
+    setHealthScore('h-confirm', d.confirmation_score);
+    setHealthScore('h-mempool', d.mempool_score);
+  }
+
+  function updateProducer(d) {
+    if (!d) return;
+    var state = d.bridge_state || 'OFFLINE';
+    var label = producerStateLabel(state);
+
+    // Summary card: state pill
+    var primary = el('sc-producer');
+    if (primary) {
+      primary.innerHTML = '<span class="pill ' + esc(producerPillClass(state)) + '">' + esc(label) + '</span>';
+      primary.className = 'sum-primary';
+    }
+
+    // Summary card: detail line
+    var detail = [];
+    if (d.epoch != null) detail.push('Epoch ' + d.epoch);
+    if (d.kes_period != null) detail.push('KES ' + d.kes_period);
+    setVal('sc-producer-detail', detail.length > 0 ? detail.join(' | ') : (d.reason || DASH), detail.length > 0);
+
+    // Material dots
+    var mat = d.material || {};
+    var dotVrf = el('sc-dot-vrf');
+    var dotKes = el('sc-dot-kes');
+    var dotPool = el('sc-dot-pool');
+    var dotStake = el('sc-dot-stake');
+    if (dotVrf) dotVrf.className = 'mat-dot ' + (mat.has_vrf ? 'mat-dot-on' : 'mat-dot-off');
+    if (dotKes) dotKes.className = 'mat-dot ' + (mat.has_kes ? 'mat-dot-on' : 'mat-dot-off');
+    if (dotPool) dotPool.className = 'mat-dot ' + (mat.has_pool_id ? 'mat-dot-on' : 'mat-dot-off');
+    if (dotStake) dotStake.className = 'mat-dot ' + (mat.has_stake ? 'mat-dot-on' : 'mat-dot-off');
+
+    // Panel badge
+    el('pn-prod-badge').textContent = label;
+
+    // Detail panel table
+    var rows = [];
+    rows.push(['State', '<span class="pill ' + esc(producerPillClass(state)) + '">' + esc(label) + '</span>']);
+    if (d.reason) rows.push(['Reason', esc(d.reason)]);
+    if (d.slot != null) rows.push(['Slot', formatNum(d.slot)]);
+    if (d.epoch != null) rows.push(['Epoch', d.epoch + (d.slot_in_epoch != null ? ' (slot ' + formatNum(d.slot_in_epoch) + ')' : '')]);
+    if (d.kes_period != null) rows.push(['KES Period', String(d.kes_period)]);
+    if (d.tip_block != null) rows.push(['Tip Block', formatNum(d.tip_block)]);
+    rows.push(['Leadership', d.leadership ? 'Yes' : 'No']);
+    rows.push(['Candidate Built', d.candidate_built ? 'Yes' : 'No']);
+
+    // Material row
+    var matParts = [];
+    matParts.push('VRF: ' + (mat.has_vrf ? 'Yes' : 'No'));
+    matParts.push('KES: ' + (mat.has_kes ? 'Yes' : 'No'));
+    matParts.push('Pool: ' + (mat.has_pool_id ? 'Yes' : 'No'));
+    matParts.push('Stake: ' + (mat.has_stake ? 'Yes' : 'No'));
+    rows.push(['Material', matParts.join(' | ')]);
+
+    if (mat.has_stake && mat.stake_x1e9 > 0) {
+      rows.push(['Stake Fraction', (mat.stake_x1e9 / 1e9).toFixed(9)]);
+    }
+
+    showTable('pn-prod-table', 'pn-prod-empty', rows.length > 0);
+    var tbody = el('pn-prod-tbody');
+    if (tbody) {
+      tbody.innerHTML = '';
+      for (var i = 0; i < rows.length; i++) {
+        var tr = document.createElement('tr');
+        tr.innerHTML = '<td>' + esc(rows[i][0]) + '</td><td style="text-align:right;">' + rows[i][1] + '</td>';
+        tbody.appendChild(tr);
+      }
+    }
+  }
+
+  function dryrunPillClass(state) {
+    if (!state) return 'pill-offline';
+    var s = String(state).toUpperCase();
+    if (s === 'CANDIDATE_READY') return 'pill-ready';
+    if (s === 'CANDIDATE_INVALID') return 'pill-error';
+    if (s === 'CANDIDATE_FAILED') return 'pill-error';
+    if (s === 'NOT_LEADER') return 'pill-not-leader';
+    if (s === 'NOT_CONFIGURED') return 'pill-not-configured';
+    if (s === 'DISABLED') return 'pill-offline';
+    return 'pill-offline';
+  }
+
+  function dryrunStateLabel(state) {
+    if (!state) return 'Disabled';
+    var s = String(state).toUpperCase();
+    if (s === 'CANDIDATE_READY') return 'Candidate Ready';
+    if (s === 'CANDIDATE_INVALID') return 'Candidate Invalid';
+    if (s === 'CANDIDATE_FAILED') return 'Candidate Failed';
+    if (s === 'NOT_LEADER') return 'Not Leader';
+    if (s === 'NOT_CONFIGURED') return 'Not Configured';
+    if (s === 'DISABLED') return 'Disabled';
+    return state;
+  }
+
+  function updateDryrun(d) {
+    if (!d) return;
+    var enabled = d.enabled === true;
+    var last = d.last || {};
+    var state = last.state || null;
+    var label = enabled ? dryrunStateLabel(state) : 'Disabled';
+
+    // Badge
+    el('pn-dr-badge').textContent = enabled ? label : 'Disabled';
+
+    if (!enabled) {
+      showTable('pn-dr-table', 'pn-dr-empty', false);
+      el('pn-dr-empty').textContent = 'Dry-run not enabled';
+      return;
+    }
+
+    var rows = [];
+    rows.push(['State', '<span class="pill ' + esc(dryrunPillClass(state)) + '">' + esc(label) + '</span>']);
+    if (last.slot != null) rows.push(['Slot', formatNum(last.slot)]);
+    if (last.epoch != null) rows.push(['Epoch', last.epoch + (last.slot_in_epoch != null ? ' (slot ' + formatNum(last.slot_in_epoch) + ')' : '')]);
+    if (last.block_no != null) rows.push(['Block', formatNum(last.block_no)]);
+    rows.push(['Leadership', last.leadership === true ? 'Yes' : last.leadership === false ? 'No' : DASH]);
+    rows.push(['Candidate Built', last.candidate_built === true ? 'Yes' : last.candidate_built === false ? 'No' : DASH]);
+    rows.push(['Candidate Valid', last.candidate_valid === true ? 'Yes' : last.candidate_valid === false ? 'No' : DASH]);
+    if (last.validation_state != null) rows.push(['Validation', esc(String(last.validation_state))]);
+    if (last.header_hash) rows.push(['Header Hash', esc(truncateHash(last.header_hash, 16))]);
+    if (last.body_hash) rows.push(['Body Hash', esc(truncateHash(last.body_hash, 16))]);
+    if (last.timestamp_unix != null) rows.push(['Age', esc(formatUnixAge(last.timestamp_unix))]);
+
+    showTable('pn-dr-table', 'pn-dr-empty', rows.length > 0);
+    var tbody = el('pn-dr-tbody');
+    if (tbody) {
+      tbody.innerHTML = '';
+      for (var i = 0; i < rows.length; i++) {
+        var tr = document.createElement('tr');
+        tr.innerHTML = '<td>' + esc(rows[i][0]) + '</td><td style="text-align:right;">' + rows[i][1] + '</td>';
+        tbody.appendChild(tr);
+      }
+    }
+  }
+
+  // ── Refresh ──
+
+  function refresh() {
+    Promise.allSettled([
+      fetch('/data/operator.json?t=' + Date.now()).then(function(r) { return r.ok ? r.json() : null; }),
+      fetch('/data/network.json?t=' + Date.now()).then(function(r) { return r.ok ? r.json() : null; }),
+      fetch('/data/slot-observatory.json?t=' + Date.now()).then(function(r) { return r.ok ? r.json() : null; }),
+      fetch('/data/mempool.json?t=' + Date.now()).then(function(r) { return r.ok ? r.json() : null; }),
+      fetch('/data/confirmation.json?t=' + Date.now()).then(function(r) { return r.ok ? r.json() : null; }),
+      fetch('/data/blocks.json?t=' + Date.now()).then(function(r) { return r.ok ? r.json() : null; }),
+      fetch('/data/health.json?t=' + Date.now()).then(function(r) { return r.ok ? r.json() : null; }),
+      fetch('/data/producer-status.json?t=' + Date.now()).then(function(r) { return r.ok ? r.json() : null; }),
+      fetch('/data/producer-dryrun.json?t=' + Date.now()).then(function(r) { return r.ok ? r.json() : null; })
+    ]).then(function(results) {
+      if (results[0].status === 'fulfilled' && results[0].value) updateOperator(results[0].value);
+      if (results[1].status === 'fulfilled' && results[1].value) updateNetwork(results[1].value);
+      if (results[2].status === 'fulfilled' && results[2].value) updateSlots(results[2].value);
+      if (results[3].status === 'fulfilled' && results[3].value) updateMempool(results[3].value);
+      if (results[4].status === 'fulfilled' && results[4].value) updateConfirmations(results[4].value);
+      if (results[5].status === 'fulfilled' && results[5].value) updateBlocks(results[5].value);
+      if (results[6].status === 'fulfilled' && results[6].value) updateHealth(results[6].value);
+      if (results[7].status === 'fulfilled' && results[7].value) updateProducer(results[7].value);
+      if (results[8].status === 'fulfilled' && results[8].value) updateDryrun(results[8].value);
+    });
+  }
+
+  refresh();
+  setInterval(refresh, INTERVAL);
+})();
+</script>
+
+</body>
+</html>

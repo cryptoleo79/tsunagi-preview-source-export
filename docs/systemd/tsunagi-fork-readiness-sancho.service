@@ -1,0 +1,16 @@
+# Tsunagi fork readiness check — sancho (daily)
+[Unit]
+Description=Tsunagi Fork Readiness Check (sancho)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/src/tsunagi-follower
+Environment=TSUNAGI_HOME=%h/tsunagi-home-sancho
+ExecStart=/usr/bin/python3 scripts/fork_readiness_check.py \
+  --home %h/tsunagi-home-sancho \
+  --net sancho \
+  --bin %h/.local/tsunagi/current/bin/tsunagi-node \
+  --state-url http://127.0.0.1:9082/state \
+  --metrics-url http://127.0.0.1:9082/metrics

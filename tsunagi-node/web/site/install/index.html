@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Install TSUNAGI</title>
+<style>
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+:root {
+  --bg: #05080e;
+  --bg-surface: #0a0f1a;
+  --bg-card: rgba(12,18,30,0.65);
+  --border: rgba(80,120,180,0.10);
+  --border-hover: rgba(80,120,180,0.28);
+  --border-accent: rgba(80,140,220,0.35);
+  --text: #d0d6e2;
+  --text-m: #7a8598;
+  --text-d: #4c5668;
+  --accent: #3d6fa8;
+  --accent-l: #5a8ec8;
+  --white: #eceef3;
+  --mono: 'SF Mono','Cascadia Code','Fira Code','Consolas',monospace;
+  --sans: -apple-system,BlinkMacSystemFont,'Segoe UI','Inter',Helvetica,Arial,sans-serif;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.pg a { color: var(--accent-l); text-decoration: none; transition: all 0.2s; }
+.pg a:hover { text-decoration: underline; }
+
+/* Utility bar nav */
+.ub { position:fixed; top:0; left:0; right:0; z-index:100; height:48px; display:flex; align-items:center; justify-content:space-between; padding:0 28px; background:rgba(5,8,14,0.92); backdrop-filter:blur(14px); border-bottom:1px solid var(--border); }
+.ub-l { display:flex; align-items:center; gap:20px; }
+.ub-brand { font-size:0.82rem; font-weight:700; letter-spacing:0.14em; color:var(--white); text-decoration:none; }
+.ub-nav { display:flex; gap:6px; flex-wrap:wrap; }
+.ub-nav a { font-size:0.75rem; font-weight:500; letter-spacing:0.03em; color:var(--text-m); text-decoration:none; padding:5px 12px; border-radius:4px; border:1px solid transparent; transition:all 0.2s; }
+.ub-nav a:hover { color:var(--white); border-color:var(--border-accent); background:rgba(60,112,180,0.08); text-decoration:none; }
+.lang-switch { display:flex; align-items:center; gap:6px; margin-left:12px; font-size:0.75rem; white-space:nowrap; }
+.lang-switch a { text-decoration:none; color:var(--text-m); transition:color 0.2s ease; }
+.lang-switch a:hover { color:var(--text); }
+.lang-cur { color:var(--accent-l) !important; font-weight:600; }
+.lang-div { opacity:0.4; }
+
+/* Page container */
+.pg { max-width:760px; margin:0 auto; padding:80px 28px 60px; }
+
+/* Title block */
+.title-block { text-align:center; margin-bottom:56px; }
+.title-block h1 { font-size:2rem; font-weight:700; color:var(--white); letter-spacing:0.06em; margin-bottom:10px; }
+.title-block .subtitle { font-size:1rem; color:var(--text-m); font-weight:400; letter-spacing:0.02em; }
+
+/* Section styling */
+.section { margin-bottom:48px; }
+.section-label { font-family:var(--mono); font-size:0.72rem; font-weight:600; letter-spacing:0.10em; color:var(--text-d); text-transform:uppercase; margin-bottom:8px; }
+.section h2 { font-size:1.3rem; font-weight:700; color:var(--white); letter-spacing:0.03em; margin-bottom:18px; }
+
+/* Content text */
+.content p { font-size:0.95rem; line-height:1.85; color:var(--text); margin-bottom:20px; }
+.content ul { list-style:none; padding:0; margin-bottom:20px; }
+.content ul li { font-size:0.95rem; line-height:1.85; color:var(--text); padding-left:18px; position:relative; margin-bottom:6px; }
+.content ul li::before { content:'\2013'; position:absolute; left:0; color:var(--text-d); }
+
+/* Code blocks */
+.code-block { background:var(--bg-card); border:1px solid var(--border); border-radius:6px; padding:16px 20px; font-family:var(--mono); font-size:0.82rem; color:var(--text); line-height:1.7; overflow-x:auto; margin:16px 0; white-space:pre; }
+.code-block .comment { color:var(--text-d); }
+
+/* Note callout */
+.note { font-size:0.82rem; color:var(--text-m); font-style:italic; margin:12px 0 24px; padding-left:14px; border-left:2px solid var(--border-accent); line-height:1.7; }
+
+/* Footer */
+.ft { text-align:center; padding:40px 0 32px; border-top:1px solid var(--border); margin-top:48px; }
+.ft p { font-size:0.78rem; color:var(--text-d); text-align:center; letter-spacing:0.03em; }
+.ft .fm { font-size:0.88rem; color:var(--text-m); font-weight:600; margin-bottom:8px; }
+
+/* Responsive */
+@media (max-width:768px) {
+  .pg { padding:68px 20px 48px; }
+  .title-block h1 { font-size:1.6rem; }
+  .title-block .subtitle { font-size:0.9rem; }
+  .section h2 { font-size:1.15rem; }
+  .ub { padding:0 16px; }
+  .ub-nav { gap:3px; }
+  .ub-nav a { padding:4px 8px; font-size:0.7rem; }
+}
+
+@media (max-width:480px) {
+  .pg { padding:60px 14px 40px; }
+  .title-block h1 { font-size:1.35rem; }
+  .section h2 { font-size:1.05rem; }
+  .code-block { border-radius:0; margin-left:-14px; margin-right:-14px; padding:14px 14px; font-size:0.76rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- Utility Bar (shared) -->
+<div id="nav-container"></div>
+<script src="/assets/nav.js"></script>
+
+<div class="pg">
+
+  <div class="title-block">
+    <h1>Install TSUNAGI</h1>
+    <p class="subtitle">Run a deterministic Cardano node in Zig</p>
+  </div>
+
+  <div class="content">
+
+    <!-- Section A: What TSUNAGI Is -->
+    <div class="section">
+      <div class="section-label">A &mdash; Overview</div>
+      <h2>What TSUNAGI Is</h2>
+      <p>
+        TSUNAGI is an independent Cardano node implementation written in Zig. It provides a
+        deterministic ledger pipeline with shadow verification, designed to follow and decode
+        Cardano blocks with full transparency into every stage of processing.
+      </p>
+      <p>
+        The runtime includes self-healing infrastructure subsystems &mdash; KAGAMI for state
+        mirroring, YAMORI for anomaly detection and recovery, TATE for vertical integrity
+        checks, and KURA for persistent storage management. Each subsystem exposes its own
+        state, giving operators complete observability into node behavior.
+      </p>
+      <p>
+        TSUNAGI is operator-focused. It is built for people who want to understand exactly
+        what their node is doing, why it is doing it, and how to verify every output.
+      </p>
+    </div>
+
+    <!-- Section B: Current Status -->
+    <div class="section">
+      <div class="section-label">B &mdash; Status</div>
+      <h2>Current Status</h2>
+      <p>
+        TSUNAGI is under active, continuous engineering. This section is an honest assessment
+        of where the project stands.
+      </p>
+      <ul>
+        <li><strong>Active development</strong> &mdash; the codebase is under continuous engineering with regular architectural changes</li>
+        <li><strong>Preview network operational</strong> &mdash; TSUNAGI follows and decodes Cardano blocks on the preview network</li>
+        <li><strong>Infrastructure and observability already live</strong> &mdash; the status page, explorer, and backup systems are operational</li>
+        <li><strong>Interface and runtime still evolving</strong> &mdash; expect changes between versions in CLI flags, configuration, and internal APIs</li>
+      </ul>
+      <p>
+        This is pre-release software. It is suitable for research, experimentation, and
+        contributing to development. It is not yet suitable for production stake pool operation.
+      </p>
+    </div>
+
+    <!-- Section C: Installation Philosophy -->
+    <div class="section">
+      <div class="section-label">C &mdash; Philosophy</div>
+      <h2>Installation Philosophy</h2>
+      <p>TSUNAGI prioritizes four principles in its build and deployment model:</p>
+      <ul>
+        <li><strong>Transparency</strong> &mdash; documented architecture at every layer, public release planned after stability milestone</li>
+        <li><strong>Reproducibility</strong> &mdash; deterministic builds using the Zig toolchain, producing identical binaries from identical source</li>
+        <li><strong>Operator visibility</strong> &mdash; every subsystem exposes its internal state through structured endpoints and logs</li>
+        <li><strong>Deterministic behavior</strong> &mdash; identical inputs always produce identical outputs, with no hidden state or undefined transitions</li>
+      </ul>
+    </div>
+
+    <!-- Section D: Installation Steps -->
+    <div class="section">
+      <div class="section-label">D &mdash; Installation</div>
+      <h2>Installation Steps</h2>
+      <p>
+        The following commands illustrate a typical workflow for cloning, building, and
+        running TSUNAGI. These are example commands and may change as the project evolves.
+      </p>
+
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:0 6px 6px 0;padding:20px 24px;margin-bottom:24px;">
+        <p style="font-size:0.88rem;color:var(--text-m);margin:0;">
+          Source is currently private during active development.
+          Public release is planned after the stability milestone.
+          The commands below reflect the expected workflow once source is available.
+        </p>
+      </div>
+
+      <div class="code-block"><span class="comment"># Build with Zig (requires Zig 0.13.0)</span>
+zig build -Doptimize=ReleaseSafe</div>
+
+      <div class="code-block"><span class="comment"># Prepare runtime home</span>
+mkdir -p ~/tsunagi-home-preview
+export TSUNAGI_HOME=~/tsunagi-home-preview</div>
+
+      <div class="code-block"><span class="comment"># Run on preview network</span>
+./zig-out/bin/tsunagi-node run --net preview</div>
+
+      <div class="code-block"><span class="comment"># Verify via state endpoint</span>
+curl http://127.0.0.1:9081/state | python3 -m json.tool</div>
+
+      <p class="note">
+        Exact flags, paths, and runtime options may change between versions.
+        The state endpoint returns JSON with chain tip, convergence, producer readiness,
+        and all subsystem metrics.
+      </p>
+    </div>
+
+    <!-- Section E: Operational Verification -->
+    <div class="section">
+      <div class="section-label">E &mdash; Verification</div>
+      <h2>Operational Verification</h2>
+      <p>
+        Once TSUNAGI is running, use the following methods to confirm node health
+        and correct operation:
+      </p>
+      <ul>
+        <li><strong>Status endpoint</strong> &mdash; the <a href="/status/">status page</a> provides real-time node telemetry including sync progress, slot height, and subsystem health</li>
+        <li><strong>Explorer</strong> &mdash; the <a href="/explorer/">explorer page</a> exposes block decode telemetry, showing decoded transaction counts and block metadata</li>
+        <li><strong>Runtime logs</strong> &mdash; structured logs are written to the TSUNAGI_HOME directory, capturing every state transition and subsystem event</li>
+        <li><strong>Backup workflow</strong> &mdash; the <code>scripts/backup-tsunagi-site.sh</code> script handles incremental backup of node state and site data</li>
+      </ul>
+    </div>
+
+    <!-- Section F: Support and Contribution -->
+    <div class="section">
+      <div class="section-label">F &mdash; Support</div>
+      <h2>Support and Contribution</h2>
+      <p>
+        TSUNAGI is an open project. Contributions, questions, and review are welcome.
+      </p>
+      <ul>
+        <li><strong>Source</strong> &mdash; currently private during active development; public release planned after stability milestone</li>
+        <li><strong>Treasury</strong> &mdash; project sustainability and funding information at the <a href="/treasury">treasury page</a></li>
+        <li><strong>Whitepaper</strong> &mdash; complete architecture documentation at the <a href="/whitepaper">whitepaper page</a></li>
+      </ul>
+    </div>
+
+  </div>
+
+  <div class="ft">
+    <p class="fm">Let It Run. Let It Resolve.</p>
+    <p>tsunagi.tech &middot; Independent Cardano infrastructure research</p>
+  </div>
+
+</div>
+
+</body>
+</html>

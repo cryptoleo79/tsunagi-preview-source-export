@@ -1,0 +1,10 @@
+# Daily fork readiness timer — preview
+[Unit]
+Description=Daily Tsunagi Fork Readiness (preview)
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+
+[Install]
+WantedBy=timers.target

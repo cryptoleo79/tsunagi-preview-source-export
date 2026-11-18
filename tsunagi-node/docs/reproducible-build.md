@@ -2,7 +2,16 @@
 
 **Version:** v4.2.0
 **Scope:** Build identity embedding and environment reporting.
-This is Layer A only — no bit-for-bit reproducibility claim is made.
+This is Layer A only — no general bit-for-bit reproducibility claim is made.
+
+> **Status note (2026-11-18).** This document was written for v4.2.0 on Zig 0.13.0. The
+> tree was migrated to Zig 0.16.0 in June 2026 and `zig.version` was left stale until it
+> was corrected alongside this note. For the exact toolchain, flags and observed rebuild
+> result of each public Preview binary, see
+> [`docs/SOURCE-RELEASE-MAP.md`](../../docs/SOURCE-RELEASE-MAP.md) and
+> [`BUILD.md`](../../BUILD.md) at the repository root. One independent rebuild of the
+> `v2026.10.05-preview-portable-x86_64` artifact matched the published SHA-256; that is a
+> single observation for one artifact, not a guarantee for other commits, flags or hosts.
 
 ## Zig Version
 
@@ -10,7 +19,7 @@ The required Zig compiler version is pinned in `zig.version`:
 
 ```
 cat zig.version
-# 0.13.0
+# 0.16.0
 ```
 
 ## Build Command

@@ -1,53 +1,86 @@
 name: CI
 
+# Build and test on GitHub-hosted runners only.
+# This workflow uses no secrets, no deployment credentials and no self-hosted
+# or production infrastructure, and its token is read-only. Keep it that way:
+# do not switch to `pull_request_target`, and do not add steps that publish.
+
 on:
   push:
-    branches: [main]
+    branches: [main, "release/**", "publication/**"]
   pull_request:
-    branches: [main]
+
+permissions:
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  # Toolchain pin. Must match tsunagi-node/zig.version and BUILD.md.
+  ZIG_VERSION: "0.16.0"
+  ZIG_TARBALL_SHA256: "70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00"
+  ZIG_EXE_SHA256: "2317bbb91798556d9d0f38aabdac23db83f0979b25f767259ae474546724087c"
+  # IntersectMBO/libsodium, branch draft-irtf-cfrg-vrf-03, as resolved on 2026-11-18.
+  LIBSODIUM_COMMIT: "b397839b58ccfd09dde2191c7e1b67d47184f6b0"
+
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  build-test:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
-      - name: Install deps
+      - name: Check toolchain pin matches zig.version
+        run: test "$(cat tsunagi-node/zig.version)" = "$ZIG_VERSION"
+
+      - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y liblmdb-dev autoconf automake libtool pkg-config build-essential git ca-certificates
+          sudo apt-get install -y liblmdb-dev autoconf automake libtool pkg-config build-essential git ca-certificates xz-utils
 
-      - name: Build IOHK libsodium (VRF)
+      - name: Build libsodium with VRF (pinned commit)
         run: |
-          git clone --depth 1 --branch draft-irtf-cfrg-vrf-03 https://github.com/intersectmbo/libsodium.git /tmp/libsodium
-          cd /tmp/libsodium
+          set -euo pipefail
+          mkdir /tmp/libsodium && cd /tmp/libsodium
+          git init -q
+          git remote add origin https://github.com/IntersectMBO/libsodium.git
+          git fetch -q --depth 1 origin "$LIBSODIUM_COMMIT"
+          git checkout -q FETCH_HEAD
+          test "$(git rev-parse HEAD)" = "$LIBSODIUM_COMMIT"
           ./autogen.sh -f
           ./configure --prefix=/usr/local
-          make -j$(nproc)
+          make -j"$(nproc)"
           sudo make install
           sudo ldconfig
           nm -D /usr/local/lib/libsodium.so | grep crypto_vrf_ietfdraft03_prove
 
-      - name: Install Zig 0.15.2
+      - name: Install Zig (hash-verified)
         run: |
-          ZIG_VER=0.15.2
-          curl -L "https://ziglang.org/download/${ZIG_VER}/zig-x86_64-linux-${ZIG_VER}.tar.xz" -o zig.tar.xz
+          set -euo pipefail
+          curl -fsSL "https://ziglang.org/download/${ZIG_VERSION}/zig-x86_64-linux-${ZIG_VERSION}.tar.xz" -o zig.tar.xz
+          echo "${ZIG_TARBALL_SHA256}  zig.tar.xz" | sha256sum --check
           tar -xf zig.tar.xz
-          sudo mv "zig-x86_64-linux-${ZIG_VER}" /opt/zig
-          echo "/opt/zig" >> $GITHUB_PATH
+          echo "${ZIG_EXE_SHA256}  zig-x86_64-linux-${ZIG_VERSION}/zig" | sha256sum --check
+          sudo mv "zig-x86_64-linux-${ZIG_VERSION}" /opt/zig
+          echo "/opt/zig" >> "$GITHUB_PATH"
 
-      - name: Build (ReleaseSafe)
+      - name: Build (ReleaseSafe, baseline CPU)
         working-directory: tsunagi-node
         run: |
           zig version
-          zig build -Doptimize=ReleaseSafe
+          zig build -j1 -Dcpu=baseline -Doptimize=ReleaseSafe \
+            -Dcommit="$(git rev-parse HEAD)" \
+            -Dtsunagi_source_dirty=false
 
-      - name: Smoke test
+      - name: Version smoke test (offline)
         working-directory: tsunagi-node
-        run: |
-          ./zig-out/bin/tsunagi-node || true
+        run: ./zig-out/bin/tsunagi-node --version
+
+      - name: Test
+        working-directory: tsunagi-node
+        run: zig build test -j1 -Dcpu=baseline -Doptimize=ReleaseSafe --summary all

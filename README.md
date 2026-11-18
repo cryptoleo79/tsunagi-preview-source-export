@@ -4,6 +4,29 @@
 
 日本語版はこちら → [README.ja.md](README.ja.md)
 
+> **Status and review entry points (2026-11-18).** This is the source for the public
+> TSUNAGI **Preview** binaries. It is evaluation software: **not qualified for Mainnet,
+> stake-pool or production use.** Public source access does not change that.
+>
+> This repository is a **source export**: its Git history was created for publication and
+> is not the original development history. See [`SOURCE-EXPORT.md`](SOURCE-EXPORT.md).
+>
+> That is a statement of qualification status, not a license condition. This source is
+> licensed under **MIT OR Apache-2.0** ([`LICENSE`](LICENSE)). The prebuilt Preview binaries
+> are published separately in
+> [`cryptoleo79/tsunagi-preview`](https://github.com/cryptoleo79/tsunagi-preview) under that
+> repository's own Preview evaluation license, which continues to apply to the binaries
+> distributed there.
+>
+> - Which source built which binary: [`docs/SOURCE-RELEASE-MAP.md`](docs/SOURCE-RELEASE-MAP.md)
+> - Build and test: [`BUILD.md`](BUILD.md)
+> - Source map, maturity levels, known limitations: [`docs/REVIEW-GUIDE.md`](docs/REVIEW-GUIDE.md)
+> - Reporting a vulnerability: [`SECURITY.md`](SECURITY.md) · Third-party notices: [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md)
+>
+> The rest of this README was last revised before June 2026. Where it describes status —
+> for example block production as "not yet proven" — the review guide carries the later,
+> dated statement.
+
 ## Project definition
 
 TSUNAGI is a Zig-native Cardano node implementation in active development. It is built for operators and engineers who care about correctness, determinism, auditability, and operational clarity.
@@ -13,6 +36,12 @@ Its current trajectory is:
 **light follower → snapshot/bootstrap/operator node → LMDB truth-backed node → fuller Zig-native Cardano node**
 
 TSUNAGI is already materially beyond a minimal ChainSync follower, but it does **not** yet claim accepted forged block production, consensus parity, or production-ready block producer status.
+
+## Reading the evidence
+
+This repository contains runtime code, verification, and research. A test pass, protocol check, or observed relay interaction supports only the assertion and environment in its cited record. Network-accepted forging, consensus parity, full validation, and production block-producer readiness remain open until independently evidenced; do not infer them from a narrower milestone.
+
+Use the [documentation directory](docs/) for detailed records, the [Japanese README](README.ja.md) for the translated overview, and [contribution guidance](CONTRIBUTING.md) for changes. For an operational claim, follow its receipt and independent audit to the exact commit and network.
 
 ## What TSUNAGI is
 
@@ -25,7 +54,7 @@ TSUNAGI is an operator-node and node-implementation effort for Cardano, written 
 - operator-first observability and control surfaces
 - signed, verifiable trust-state direction
 
-It is designed to stay lightweight, exact, and inspectable rather than opaque or bloated.
+It is designed to stay lightweight, exact, and inspectable.
 
 ## What is currently proven
 
@@ -241,7 +270,7 @@ Replay baseline / regression:
 - Vision / roadmap → [VISION.md](VISION.md)
 - Manifesto → [MANIFESTO.md](MANIFESTO.md)
 - Threat model → [docs/threat-model.md](docs/threat-model.md)
-- Networks → [docs/networks.md](docs/networks.md)
+- Networks and `TSUNAGI_HOME` isolation → see the section above in this README
 - Fork readiness proof → [docs/fork-ready-proof.md](docs/fork-ready-proof.md)
 
 ## Status note / truthful boundary
